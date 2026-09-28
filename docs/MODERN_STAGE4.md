@@ -1,5 +1,10 @@
 # Modern Stage 4 handoff audit
 
+> Historical record: this document describes its release or migration stage.
+> The legacy build and fallback commands have since been retired. The existing
+> `v2.0.0` tag preserves the final legacy-capable implementation. See
+> [the current README](../README.md) for supported commands.
+
 Stage 4 ports the production native-music-only stop and acknowledgement to pinned
 modern `sonicretro/s2disasm`. It is an inert migration stage. Ordinary gameplay
 still uses native music, and the sixteen Addryu routes and five MD+ controls

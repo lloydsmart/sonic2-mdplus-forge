@@ -1,5 +1,10 @@
 # Modern Stage 5 live routing audit
 
+> Historical record: this document describes its release or migration stage.
+> The legacy build and fallback commands have since been retired. The existing
+> `v2.0.0` tag preserves the final legacy-capable implementation. See
+> [the current README](../README.md) for supported commands.
+
 Stage 5 connects live 68000 ownership and control to the existing Stage 3
 backend and frozen Stage 4 acknowledged Z80 handoff. This is the first modern
 ROM capable of real MD+ playback. **The required Stage 5 MiSTer FPGA hardware
@@ -8,8 +13,9 @@ source/binary audits remain separate evidence; the hardware results below come
 from the maintainer's actual MiSTer testing. Missing-WAV testing was not run and
 is optional robustness coverage, not an outstanding merge gate.
 
-Production/default `make rom` and `make all` remain legacy. No modern packaging
-or default cutover is included.
+At Stage 5, production/default `make rom` and `make all` still used legacy.
+Stage 6 subsequently promoted this exact ROM to production; it is now the only
+supported implementation.
 
 ## Sources and exact changes
 

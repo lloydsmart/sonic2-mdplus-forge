@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import unittest
 
-from check_hybrid_binary import Machine
+from cpu_machine import Machine
 from unicorn import UC_HOOK_CODE, UC_HOOK_MEM_READ
 from unicorn.m68k_const import UC_M68K_REG_A5, UC_M68K_REG_A6, UC_M68K_REG_PC
 
@@ -17,11 +17,8 @@ from tools.mdplus_builder.driver import saxman_decode
 
 class ModernMachine(Machine):
     def __init__(self):
-        super().__init__(modern.PREPARED_MODERN_DIR)
-
-    @staticmethod
-    def read_symbols(source):
-        return modern.modern_symbols(source / 's2.lst')
+        super().__init__(modern.PREPARED_MODERN_DIR,
+                         modern.modern_symbols(modern.PREPARED_MODERN_DIR / 's2.lst'))
 
     def set68(self, name, value):
         address = self.symbols[name]
