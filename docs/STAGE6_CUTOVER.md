@@ -1,5 +1,10 @@
 # Stage 6 production cutover
 
+> Historical record: this document describes its release or migration stage.
+> The legacy build and fallback commands have since been retired. The existing
+> `v2.0.0` tag preserves the final legacy-capable implementation. See
+> [the current README](../README.md) for supported commands.
+
 ## Public-interface audit before editing
 
 The starting branch is `migration/06-modern-cutover`, at integration base

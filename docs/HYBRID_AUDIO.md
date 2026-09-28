@@ -1,5 +1,10 @@
 # Hybrid music architecture
 
+> Historical record: this document describes its release or migration stage.
+> The legacy build and fallback commands have since been retired. The existing
+> `v2.0.0` tag preserves the final legacy-capable implementation. See
+> [the current README](../README.md) for supported commands.
+
 The ROM owns the [fixed sixteen-cue routing policy](TRACKS.md#fixed-rom-routing).
 The manifest, CUE and WAV files cannot change it. The corrected hybrid ROM has
 been verified on MiSTer across native and MD+ transitions, pause/resume, fades,

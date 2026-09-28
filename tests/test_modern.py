@@ -7,23 +7,21 @@ from pathlib import Path
 from unittest.mock import patch
 
 from tools.mdplus_builder import cli, modern, source
-from tools.mdplus_builder.common import DEPENDENCIES, ROM_PATH, SOURCE_DIR, BuildError, load_json
+from tools.mdplus_builder.common import DEPENDENCIES, ROM_PATH, BuildError, load_json
 
 
 class ModernSourceTests(unittest.TestCase):
-    def test_pins_and_paths_are_separate(self) -> None:
+    def test_production_pin_and_stock_output_are_preserved(self) -> None:
         deps = load_json(DEPENDENCIES)
         self.assertEqual(deps['source_modern'], {
             'url': 'https://github.com/sonicretro/s2disasm.git',
             'commit': '380f37a731bfc720bb0371a35a593184a7ec5e43',
         })
-        self.assertEqual(deps['source']['commit'], 'b49afdb010090c282e1bb79f18f14a32d1bb7a99')
-        self.assertNotEqual(modern.SOURCE_MODERN_DIR, SOURCE_DIR)
+        self.assertEqual(set(deps), {'source_modern'})
         self.assertNotEqual(modern.STOCK_MODERN_ROM_PATH, ROM_PATH)
-        self.assertIsNone(cli.parser().parse_args(['build-rom']).source_dir)
         self.assertIsNone(cli.parser().parse_args(['build-rom']).output)
 
-    def test_bootstraps_fetch_only_their_dependencies(self) -> None:
+    def test_bootstrap_fetches_only_production_dependency(self) -> None:
         deps = load_json(DEPENDENCIES)
         with patch.object(modern, '_clone_at') as clone:
             modern.bootstrap_modern(local_source=Path('/local/s2disasm'))
@@ -31,10 +29,6 @@ class ModernSourceTests(unittest.TestCase):
                 deps['source_modern']['url'], deps['source_modern']['commit'],
                 modern.SOURCE_MODERN_DIR, Path('/local/s2disasm'),
             )
-        with patch.object(source, '_clone_at') as clone:
-            source.bootstrap(skip_assembler_build=True)
-            self.assertEqual([call.args[1] for call in clone.call_args_list],
-                             [deps['source']['commit'], deps['assembler']['commit']])
 
     def test_cli_routes_modern_commands(self) -> None:
         with patch.object(cli, 'bootstrap_modern') as bootstrap:

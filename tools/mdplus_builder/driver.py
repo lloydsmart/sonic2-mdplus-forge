@@ -1,9 +1,6 @@
 """Check the compressed Z80 driver against what the 68000 loader actually loads."""
 from __future__ import annotations
 
-import re
-from pathlib import Path
-
 from .common import BuildError
 
 # SUBQ.W #1,D7 / BCS.S exit / MOVE.B (A6)+,D0 / RTS / ADDQ.W #4,SP / RTS.
@@ -50,64 +47,3 @@ def saxman_decode(data: bytes, *, stock_loader: bool = False) -> bytes:
                     raise BuildError('Saxman output exceeds Z80 address space')
     except EOFError:
         return bytes(output)
-
-
-def assembled_driver(path: Path) -> bytes:
-    """Extract the single Z80 segment from AS's generated .p file."""
-    data = path.read_bytes()
-    if data[:2] != b'\x89\x14':
-        raise BuildError('Invalid AS object header')
-    position = 2
-    segments = []
-    while position < len(data):
-        kind = data[position]
-        position += 1
-        if kind == 0:
-            break
-        if kind == 0x80:
-            position += 3
-            continue
-        cpu = kind
-        if kind == 0x81:
-            cpu, _, granularity = data[position:position + 3]
-            position += 3
-            if granularity != 1:
-                raise BuildError('Unsupported AS object granularity')
-        start = int.from_bytes(data[position:position + 4], 'little')
-        length = int.from_bytes(data[position + 4:position + 6], 'little')
-        position += 6
-        segment = data[position:position + length]
-        position += length
-        if len(segment) != length:
-            raise BuildError('Truncated AS object segment')
-        # The 68K startup also embeds a short Z80 reset program at a ROM
-        # address. Only the segment at zero is compressed as the sound driver.
-        if cpu == 0x51 and start == 0:
-            segments.append(segment)
-    if len(segments) != 1:
-        raise BuildError('Expected exactly one assembled Z80 driver')
-    return segments[0]
-
-
-def verify_driver_load(source_dir: Path, rom: bytes) -> dict[str, int]:
-    header = (source_dir / 's2.h').read_text(errors='replace')
-    match = re.search(r'#define movewZ80CompSize 0x([0-9A-Fa-f]+)', header)
-    if match is None:
-        raise BuildError('Missing compressed driver length location')
-    length_instruction = int(match[1], 16)
-    if rom[length_instruction - 4:length_instruction - 2] != bytes.fromhex('4dfa'):
-        raise BuildError('Unexpected sound driver loader address instruction')
-    if rom[length_instruction:length_instruction + 2] != bytes.fromhex('3e3c'):
-        raise BuildError('Unexpected sound driver length instruction')
-    start = length_instruction - 2 + int.from_bytes(
-        rom[length_instruction - 2:length_instruction], 'big', signed=True)
-    length = int.from_bytes(rom[length_instruction + 2:length_instruction + 4], 'big')
-    if rom[length_instruction:start].count(LOADER_READ) != 1:
-        raise BuildError('Sound driver loader does not process the final compressed byte')
-    loaded = saxman_decode(rom[start:start + length])
-    assembled = assembled_driver(source_dir / 's2.p')
-    if loaded != assembled:
-        raise BuildError(f'Loaded Z80 driver differs from assembly: {len(loaded)} vs {len(assembled)} bytes')
-    if len(loaded) > 0x1380:
-        raise BuildError('Loaded Z80 driver overlaps music data')
-    return {'z80_compressed_bytes': length, 'z80_loaded_bytes': len(loaded)}

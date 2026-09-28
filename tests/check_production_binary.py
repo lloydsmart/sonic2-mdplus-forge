@@ -1,10 +1,10 @@
-"""Verify the public cutover outputs after make rom and make rom-legacy."""
+"""Verify the public cutover outputs after make rom."""
 from __future__ import annotations
 
 import unittest
 
 from tools.mdplus_builder import modern, source
-from tools.mdplus_builder.common import DEPENDENCIES, LEGACY_ROM_PATH, ROM_PATH, load_json
+from tools.mdplus_builder.common import DEPENDENCIES, ROM_PATH, load_json
 
 
 class ProductionIdentityTests(unittest.TestCase):
@@ -30,17 +30,6 @@ class ProductionIdentityTests(unittest.TestCase):
         self.assertEqual(load_json(DEPENDENCIES)['source_modern']['commit'], expected)
         self.assertEqual(source._git_output(modern.SOURCE_MODERN_DIR, 'rev-parse', 'HEAD'), expected)
         self.assertEqual(source._git_output(modern.PREPARED_MODERN_DIR, 'rev-parse', 'HEAD'), expected)
-
-    def test_legacy_fallback_is_exact_previous_production_rom(self):
-        result = source.verify_rom(LEGACY_ROM_PATH, strict_regression=True)
-        self.assertEqual((result['size'], result['header_checksum'], result['sha256']), (
-            2_129_922, '2911', '315c69fb84dbca2a31ceffe3face70b4138317feed53feb7e23c6a5ab009205e',
-        ))
-        self.assertNotEqual(ROM_PATH.resolve(), LEGACY_ROM_PATH.resolve())
-        with self.assertRaisesRegex(modern.BuildError, 'size'):
-            modern.verify_modern(LEGACY_ROM_PATH, strict_regression=True)
-        with self.assertRaisesRegex(modern.BuildError, 'regression target'):
-            source.verify_rom(ROM_PATH, strict_regression=True)
 
 
 if __name__ == '__main__':

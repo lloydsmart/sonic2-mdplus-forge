@@ -36,7 +36,8 @@ hardware verification. The optional missing-WAV robustness test was not run.
 
 The current production build and package commands use that exact hardware-tested
 ROM. Version 2.0.0 makes it the default while preserving its game and audio
-behavior. The previous production implementation remains an explicit legacy fallback.
+behavior. The previous implementation has since been retired; production is now
+the only supported build path.
 
 ## What the build does
 
@@ -63,9 +64,8 @@ sudo apt install git make gcc python3 lua5.3 ffmpeg
 
 Lua 5.3 or newer must be available as `lua`. No third-party Python packages are
 required for normal builds. Network access fetches one pinned source dependency
-for the default build; legacy additionally needs its fork and ASL. The repository
-supplies tooling and metadata, not a ROM or soundtrack. Audio must be supplied
-locally from your lawful purchase.
+for the production build. The repository supplies tooling and metadata, not a
+ROM or soundtrack. Audio must be supplied locally from your lawful purchase.
 
 ## Quick start
 
@@ -150,36 +150,12 @@ The builder clones committed input; it does not modify that local checkout.
 The module CLI is also available as `sonic2-mdplus` after installation.
 Run `make help` or add `--help` to an individual CLI command for its options.
 
-## Explicit legacy fallback
+## Earlier implementations
 
-The earlier hardware-verified `msu-md-sonic2` implementation remains available
-for rollback and comparison. It is pinned to fork commit
-`b49afdb010090c282e1bb79f18f14a32d1bb7a99`, including the upstream game-mode
-repair. Its audio implementation is preserved unchanged.
-
-```sh
-make bootstrap-legacy
-make rom-legacy
-python3 -m tools.mdplus_builder verify-rom --legacy \
-  --strict-regression build/sonic2-legacy-mdplus.md
-```
-
-These targets use the CLI `--legacy` option. `make source-legacy` prepares
-`build/prepared-legacy/`; `make rom-legacy` regenerates it before building.
-Legacy uses ASL 1.42 build 306, pinned to
-`c7155b4fd3d33110f0eb098dede4295a8c008772`, built locally under `build/asl/`.
-The established source syntax conversion and driver checks remain intact.
-
-Use `make package-legacy` to package the legacy ROM with already prepared audio,
-or `make all-legacy INPUT_DIR="$PWD/inputs/audio"` for the entire fallback build.
-Both deliberately replace the same named Addryu directory under `dist/` with a
-legacy package; preserve a local copy first if comparing both. `make package`
-restores the production package from the separate canonical ROM. Neither ROM
-build overwrites the other implementation's build output.
-
-For offline source reuse, `bootstrap --legacy --local-source /path/to/fork`
-requires a clone containing the pinned `lloydsmart/msu-md-sonic2` commit.
-An ArcadeTV-only clone without that commit cannot supply it.
+Earlier Forge releases used `msu-md-sonic2` and a separately built ASL assembler.
+That implementation and its fallback commands are retired. Git history and the
+existing `v2.0.0` tag preserve the final legacy-capable state; historical release
+and migration documents describe those earlier versions.
 
 ## Compatibility and development commands
 
@@ -251,14 +227,8 @@ The production build and packaging enforce the exact Stage 5 identity:
 - SHA-256: `bd12138cd478596e4d294a06f573a98a6d37747dfe58d726ca62cf50dc3a8c44`
 - 21 complete MD+ command transactions; unchanged Stage 3 backend and Stage 4 Z80
 
-Explicit legacy verification enforces:
-
-- Size: `2,129,922` bytes; Mega Drive checksum: `2911`
-- SHA-256: `315c69fb84dbca2a31ceffe3face70b4138317feed53feb7e23c6a5ab009205e`
-
-`verify-rom` selects the current implementation unless `--legacy` is supplied.
-Neither a stock ROM nor the other implementation is accepted by strict
-verification or packaging for the selected path.
+`verify-rom` verifies the production implementation. Strict verification and
+packaging reject stock ROMs and ROMs from earlier implementations.
 
 ## Adding tracks and loop points
 
@@ -287,7 +257,7 @@ normal speed. Native speed controls retain the original driver behavior.
 
 See [production architecture](docs/MODERN_STAGE5.md) for queue semantics,
 handoff ordering, RAM allocation and hardware coverage limits. The
-[legacy architecture](docs/HYBRID_AUDIO.md) remains documented for fallback use.
+[earlier architecture](docs/HYBRID_AUDIO.md) is retained as a historical record.
 
 ## Validation and clean Linux regression
 
@@ -322,10 +292,6 @@ make doctor
 python3 -m tools.mdplus_builder validate-manifest --manifest config/tracks.json
 make all INPUT_DIR=/absolute/path/to/your/purchased/audio
 python3 -m tools.mdplus_builder verify-rom --strict-regression build/sonic2-mdplus.md
-make bootstrap-legacy
-make rom-legacy
-python3 -m tools.mdplus_builder verify-rom --legacy \
-  --strict-regression build/sonic2-legacy-mdplus.md
 ```
 
 That disposable checkout has its own `build/` and `dist/`; source and generated
@@ -333,26 +299,22 @@ outputs from the original checkout are not reused. For uncommitted development,
 copy all tracked and nonignored new files into a disposable directory instead.
 Keep the copy under ignored `build/`; include no existing generated output.
 
-Back in the original checkout, build both implementations and stock once, then
+Back in the original checkout, build production and stock once, then
 run the explicit compiled binary suites:
 
 ```sh
 make bootstrap
 make build-stock-modern
 make rom
-make bootstrap-legacy
-make rom-legacy
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_production_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_modern_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_modern_handoff_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_modern_live_binary.py
-PYTHONPATH=. build/emulation-venv/bin/python tests/check_hybrid_binary.py build/prepared-legacy
-PYTHONPATH=. build/emulation-venv/bin/python tests/check_game_modes_binary.py build/prepared-legacy
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_modern_fixbugs.py
 ```
 
-The binary suites check exact production/fallback identities and execute compiled
-68000/Z80 instructions for backend, handoff, live routing and legacy game modes.
+The binary suites check the exact production identity and execute compiled
+68000/Z80 instructions for the backend, handoff and live routing.
 `fixBugs=1` must be rejected by the fixed-layout assembly assertion. These tests
 do not model audible mixing, SD-card access or console bus timing.
 

@@ -7,6 +7,16 @@ Versioning for its own tooling releases.
 
 ## [Unreleased]
 
+### Removed
+
+- Retire the `msu-md-sonic2` / separately built ASL fallback, its dependency
+  pins, `--legacy` selection, legacy-only options and `*-legacy` Make targets.
+  Remove its source converter, ASM helpers, ROM verifier and exclusive tests.
+  CI now validates only stock upstream and the production implementation.
+- Preserve the production commands, compatibility aliases, strict checks and
+  byte-identical hardware-tested Stage 5 ROM. Earlier implementations remain
+  available in Git history and the existing `v2.0.0` tag.
+
 ## [2.0.0] - 2026-09-25
 
 ### Changed
