@@ -65,10 +65,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes lua5.3
           python -m pip install --disable-pip-version-check '.[emulation]'
-      - name: Build pinned stock and canonical production ROMs
+      - name: Build pinned stock references and canonical production ROM
         run: |
           make bootstrap
           make build-stock-modern
+          make build-stock-bugfixed
           make rom
           python -m tools.mdplus_builder verify-rom --strict-regression build/sonic2-mdplus.md
       - name: Verify cutover identities and source pin
@@ -86,3 +87,5 @@ jobs:
           python -m tools.mdplus_builder verify-rom --bugfixed --strict-regression build/sonic2-mdplus-bugfixed.md
           cmp build/sonic2-mdplus.md build/sonic2-mdplus-bugfixed.md
           PYTHONPATH=. python tests/check_bugfixed_binary.py
+      - name: Audit curated stock Bugfixed policy, layout and deterministic isolation
+        run: PYTHONPATH=. python tests/check_stock_bugfixed_binary.py

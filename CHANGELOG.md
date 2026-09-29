@@ -9,6 +9,17 @@ Versioning for its own tooling releases.
 
 ### Added
 
+- Correct the enabled upstream MCZ boss drill-detachment fix's right-drill
+  operand in the stock Bugfixed policy, verify both orientations against the
+  compiled ROM and re-baseline its strict identity. Freeze sound-bank layout
+  addresses and document significant included fixes and the 2 MiB alignment
+  cascade. Current MD+ flavours remain unchanged.
+- Establish the curated no-MD+ stock Bugfixed development reference with
+  `build-stock-bugfixed`, a pinned source policy, strict ROM identity and
+  deterministic binary/source audits. Enable ordinary upstream game fixes while
+  deferring Z80 fixes, music/SFX data fixes, the complete 2P page-flip cluster and
+  Fixed Files. Document the policy and next MD+ integration constraints in
+  `docs/BUGFIXED.md`. Both MD+ flavours remain byte-identical to Production.
 - Introduce a separate Bugfixed build flavour selected with `--bugfixed` or
   `source-bugfixed`, `rom-bugfixed`, `package-bugfixed` and `all-bugfixed` Make
   targets. Prepared source, ROM and package outputs coexist with Production;

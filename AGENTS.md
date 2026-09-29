@@ -15,8 +15,11 @@ or generated MiSTer packages.
 - Production is the default, hardware-qualified flavour. Keep its identity and
   compatibility symlink unchanged. Bugfixed has isolated prepared, ROM and
   package outputs but currently must remain byte-identical to Production.
-  Actual bugfixes require a separate change; do not enable `fixBugs` or
-  `FixDriverBugs` as part of maintaining this structural boundary.
+  The separate no-MD+ `build-stock-bugfixed` development reference enables the
+  curated policy in `docs/BUGFIXED.md`. Do not feed it into MD+ preparation or
+  change MD+ hook addresses/profile identities without a separate integration
+  change. Keep Z80 and music/SFX data fixes off in that reference, and preserve
+  retail behaviour for the complete 2P sprite cluster and the `$FFF100-$FFF5FF` RAM hole.
 - Do not guess loop points. New default-manifest loops require listening tests
   and MiSTer verification across multiple repetitions.
 - Preserve the delayed MD+ overlay activation; opening it before Sonic's
@@ -43,6 +46,9 @@ the README and confirm that the generated ROM still matches the documented
 size, header checksum, MD+ signatures, and SHA-256 value. Run both ROM builds
 and `tests/check_bugfixed_binary.py` to check variant identity and equality,
 retaining all Production compiled suites and the `fixBugs=1` negative control.
+Build both stock references and run `tests/check_stock_bugfixed_binary.py` after
+both MD+ builds. Keep the stock Bugfixed strict identity and exclusion audits
+independent of the MD+ Bugfixed verification profile.
 Audio changes require an FFmpeg conversion test using non-copyrighted
 synthetic input.
 
