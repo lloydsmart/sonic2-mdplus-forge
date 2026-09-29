@@ -38,11 +38,11 @@ The current production build and package commands use that exact hardware-tested
 ROM. Version 2.0.0 makes it the default while preserving its game and audio
 behavior. Production remains the default and hardware-qualified build.
 
-Bugfixed is a separate maintained build flavour with its own outputs. For this
-architectural change it deliberately remains byte-identical to Production:
-no new gameplay fixes are enabled. Actual bugfixes will be introduced separately
-after this build boundary is established. The previous implementation remains
-retired.
+Bugfixed is a separate maintained MD+ build flavour with its own outputs. It
+still remains byte-identical to Production and provides no corrected gameplay.
+A separate no-MD+ stock Bugfixed development reference now establishes the
+[curated source policy](docs/BUGFIXED.md). The next phase will integrate MD+
+against that reference. The previous implementation remains retired.
 
 ## What the build does
 
@@ -182,7 +182,8 @@ make all-bugfixed INPUT_DIR="$PWD/inputs/audio"
 The CLI adds `--bugfixed` to `prepare-source`, `build-rom`, `verify-rom`,
 `package` and `all`. Omitting it selects Production. Compatibility aliases
 remain Production-only; the historical `build/sonic2-modern-mdplus.md` symlink
-still points only to Production. There is no stock Bugfixed target.
+still points only to Production. The separate `build-stock-bugfixed` target is
+a development reference with no MD+ support or package command.
 
 Bugfixed packaging reuses `build/audio/` and the unchanged track manifest.
 Its ROM and CUE basenames are both
@@ -197,7 +198,8 @@ retain one source transformation path. Both profiles currently enforce the
 Production identity below and share every fixed-layout, MD+ transaction and
 Z80 audit. Future audited Bugfixed identity/layout differences belong at this
 profile boundary; changing Bugfixed must never rebaseline Production.
-`fixBugs` stays `0`, `FixDriverBugs` stays off, and the Stage 4 Z80 image and
+In both MD+ flavours, `fixBugs` stays `0`, `FixDriverBugs` stays off, and the
+Stage 4 Z80 image and
 `$FFF100-$FFF5FF` RAM reservation remain unchanged. No upstream Fixed Files or
 new gameplay/data fixes are applied. Bugfixed does not yet provide corrected
 gameplay.
@@ -225,7 +227,12 @@ REV01 after bootstrap. It builds in a disposable clone and verifies:
 - MD5: `9feeb724052c39982d432a7851c98d3e`
 - SHA-256: `193bc4064ce0daf27ea9e908ed246d87ec576cc294833badebb590b6ad8e8f6b`
 
-Stock output has no MD+ support and is never selected for packaging.
+`make build-stock-bugfixed` uses the same bootstrapped dependency to build the
+curated no-MD+ reference. It publishes `build/sonic2-stock-bugfixed.md` and
+`build/sonic2-stock-bugfixed.lst`, enforcing a separate strict identity.
+See [Bugfixed source policy](docs/BUGFIXED.md) for inclusions, exclusions,
+audited hashes and integration constraints. Neither stock output is selected
+for packaging.
 Internal `hybrid_modern*.asm` names and `source_modern` configuration retain
 historical names to keep maintenance changes small. See the
 [Stage 6 interface audit](docs/STAGE6_CUTOVER.md),
@@ -358,6 +365,7 @@ run the explicit compiled binary suites:
 ```sh
 make bootstrap
 make build-stock-modern
+make build-stock-bugfixed
 make rom
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_production_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_modern_binary.py
@@ -371,6 +379,7 @@ python3 -m tools.mdplus_builder verify-rom \
 cmp build/sonic2-mdplus.md build/sonic2-mdplus-bugfixed.md
 sha256sum build/sonic2-mdplus.md build/sonic2-mdplus-bugfixed.md
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_bugfixed_binary.py
+PYTHONPATH=. build/emulation-venv/bin/python tests/check_stock_bugfixed_binary.py
 ```
 
 The binary suites check the exact production identity and execute compiled
@@ -380,7 +389,15 @@ do not model audible mixing, SD-card access or console bus timing.
 The Bugfixed binary check proves strict identity, independent profile selection,
 equal prepared source content and byte-for-byte ROM equality. CI retains all
 Production CPU suites and adds this structural check without duplicating those
-CPU suites for identical ROMs.
+CPU suites for identical ROMs. The stock Bugfixed audit checks the source
+exclusions, compiled RAM and Z80 evidence, strict identity, deterministic
+recreation and isolation from both MD+ prepared trees and ROMs. It writes layout
+and adapter-pattern reports only under ignored `build/`.
+
+For source-policy changes, run the same reference builds and compiled checks in
+a disposable clean Linux copy, with one `make bootstrap` and no reused build
+outputs. Audio conversion and packaging need not be repeated when their code
+and inputs are unchanged.
 
 The production ROM is byte-identical to the hardware-tested Stage 5 image, so
 its passed hardware gate also covers this release. The

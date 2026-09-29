@@ -15,6 +15,7 @@ from .audio import (
     validate_manifest,
     validate_wave,
 )
+from .bugfixed import build_stock_bugfixed
 from .common import (
     BUILD,
     DEFAULT_MANIFEST,
@@ -72,6 +73,8 @@ def parser() -> argparse.ArgumentParser:
     p = commands.add_parser("bootstrap-modern", help="compatibility alias for bootstrap")
     p.add_argument("--local-source", type=_path, help="clone s2disasm from an existing local checkout")
     commands.add_parser("build-stock-modern", help="build and verify stock REV01 with upstream Lua (no MD+)")
+
+    commands.add_parser("build-stock-bugfixed", help="build the curated Bugfixed development reference (no MD+)")
 
     commands.add_parser("prepare-modern", help="compatibility alias for prepare-source")
     commands.add_parser("build-modern", help="compatibility alias for build-rom (same canonical output)")
@@ -159,6 +162,8 @@ def main(argv: list[str] | None = None) -> int:
             bootstrap_modern(local_source=args.local_source)
         elif args.command == "build-stock-modern":
             _print_json(build_stock_modern())
+        elif args.command == "build-stock-bugfixed":
+            _print_json(build_stock_bugfixed())
         elif args.command == "prepare-modern":
             _print_json(prepare_modern())
         elif args.command == "prepare-source":
