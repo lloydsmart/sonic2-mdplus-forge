@@ -19,13 +19,13 @@ from .common import (
     BUILD,
     DEFAULT_MANIFEST,
     DIST,
-    ROM_PATH,
     BuildError,
     crc32,
     require_program,
 )
 from .modern import bootstrap_modern, build_modern, build_stock_modern, prepare_modern, verify_modern
 from .package import assemble, cue_text
+from .variants import BuildVariant
 
 CLEAN_ROM_REVISIONS = {
     "24AB4C3A": "World Rev 0",
@@ -50,6 +50,14 @@ def _clean_rom_revision(value: str) -> str:
         ) from exc
 
 
+def _add_variant(command: argparse.ArgumentParser) -> None:
+    command.add_argument(
+        "--bugfixed", dest="variant", action="store_const", const=BuildVariant.BUGFIXED,
+        default=BuildVariant.PRODUCTION,
+        help="select the Bugfixed flavour (currently byte-identical to Production)",
+    )
+
+
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
         prog="sonic2-mdplus",
@@ -68,14 +76,17 @@ def parser() -> argparse.ArgumentParser:
     commands.add_parser("prepare-modern", help="compatibility alias for prepare-source")
     commands.add_parser("build-modern", help="compatibility alias for build-rom (same canonical output)")
 
-    commands.add_parser("prepare-source", help="prepare the pinned production MD+ source")
+    p = commands.add_parser("prepare-source", help="prepare the pinned MD+ source")
+    _add_variant(p)
 
-    p = commands.add_parser("build-rom", help="prepare, build and verify the production REV01 MD+ ROM")
-    p.add_argument("--output", type=_path, help="ROM output (default: build/sonic2-mdplus.md)")
+    p = commands.add_parser("build-rom", help="prepare, build and verify the REV01 MD+ ROM")
+    _add_variant(p)
+    p.add_argument("--output", type=_path, help="ROM output (default: selected flavour's build path)")
 
     p = commands.add_parser("verify-rom", help="verify a generated ROM's checksum and MD+ signatures")
     p.add_argument("rom", type=_path)
     p.add_argument("--strict-regression", action="store_true")
+    _add_variant(p)
 
     p = commands.add_parser("verify-clean-rom", help="identify a supported clean Sonic 2 World ROM revision")
     p.add_argument("rom", type=_path)
@@ -113,11 +124,13 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--max-score", type=float, help="fail when normalized RMS score exceeds this value")
 
     p = commands.add_parser("package", help="assemble the MiSTer-ready directory")
+    _add_variant(p)
     p.add_argument("--manifest", type=_path, default=DEFAULT_MANIFEST)
-    p.add_argument("--rom", type=_path, help="verified ROM to package (default: build/sonic2-mdplus.md)")
+    p.add_argument("--rom", type=_path, help="verified ROM to package (default: selected flavour's build path)")
     p.add_argument("--audio-dir", type=_path, default=BUILD / "audio")
 
     p = commands.add_parser("all", help="bootstrap, convert, build, prepare audio, and package")
+    _add_variant(p)
     p.add_argument("--manifest", type=_path, default=DEFAULT_MANIFEST)
     p.add_argument("--input-dir", type=_path, required=True)
     p.add_argument("--local-source", type=_path)
@@ -146,14 +159,16 @@ def main(argv: list[str] | None = None) -> int:
             bootstrap_modern(local_source=args.local_source)
         elif args.command == "build-stock-modern":
             _print_json(build_stock_modern())
-        elif args.command in {"prepare-source", "prepare-modern"}:
+        elif args.command == "prepare-modern":
             _print_json(prepare_modern())
+        elif args.command == "prepare-source":
+            _print_json(prepare_modern(variant=args.variant))
         elif args.command == "build-modern":
             _print_json(build_modern())
         elif args.command == "build-rom":
-            _print_json(build_modern(args.output or ROM_PATH))
+            _print_json(build_modern(args.output, variant=args.variant))
         elif args.command == "verify-rom":
-            _print_json(verify_modern(args.rom, strict_regression=args.strict_regression))
+            _print_json(verify_modern(args.rom, strict_regression=args.strict_regression, variant=args.variant))
         elif args.command == "verify-clean-rom":
             value = crc32(args.rom)
             revision = _clean_rom_revision(value)
@@ -206,12 +221,12 @@ def main(argv: list[str] | None = None) -> int:
             if args.max_score is not None and score > args.max_score:
                 raise BuildError(f"Loop score {score:.8f} exceeds limit {args.max_score:.8f}")
         elif args.command == "package":
-            print(assemble(args.manifest, rom_path=args.rom, audio_dir=args.audio_dir))
+            print(assemble(args.manifest, rom_path=args.rom, audio_dir=args.audio_dir, variant=args.variant))
         elif args.command == "all":
             bootstrap_modern(local_source=args.local_source)
-            build_modern()
+            build_modern(variant=args.variant)
             prepare_audio(args.manifest, args.input_dir)
-            print(assemble(args.manifest))
+            print(assemble(args.manifest, variant=args.variant))
         elif args.command == "clean":
             for directory in (BUILD, DIST):
                 if directory.exists():

@@ -12,6 +12,11 @@ or generated MiSTer packages.
 - Keep `config/dependencies.json` pinned to immutable commit hashes.
 - Treat dependency checkouts under `build/` as generated, read-only inputs.
 - Keep all generated material under ignored `build/`, `dist/`, or `inputs/`.
+- Production is the default, hardware-qualified flavour. Keep its identity and
+  compatibility symlink unchanged. Bugfixed has isolated prepared, ROM and
+  package outputs but currently must remain byte-identical to Production.
+  Actual bugfixes require a separate change; do not enable `fixBugs` or
+  `FixDriverBugs` as part of maintaining this structural boundary.
 - Do not guess loop points. New default-manifest loops require listening tests
   and MiSTer verification across multiple repetitions.
 - Preserve the delayed MD+ overlay activation; opening it before Sonic's
@@ -35,8 +40,11 @@ python3 -m tools.mdplus_builder validate-manifest --manifest config/tracks.json
 
 For source-conversion changes, also run the clean Linux regression described in
 the README and confirm that the generated ROM still matches the documented
-size, header checksum, MD+ signatures, and SHA-256 value. Audio changes require
-an FFmpeg conversion test using non-copyrighted synthetic input.
+size, header checksum, MD+ signatures, and SHA-256 value. Run both ROM builds
+and `tests/check_bugfixed_binary.py` to check variant identity and equality,
+retaining all Production compiled suites and the `fixBugs=1` negative control.
+Audio changes require an FFmpeg conversion test using non-copyrighted
+synthetic input.
 
 ## Commits and releases
 

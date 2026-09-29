@@ -5,8 +5,9 @@ import shutil
 from pathlib import Path
 
 from .audio import _track_name, validate_manifest, validate_wave
-from .common import AUDIO_DIR, DIST, ROM_PATH, BuildError, sha256
+from .common import AUDIO_DIR, DIST, BuildError, sha256
 from .modern import verify_modern
+from .variants import BuildVariant
 
 
 def cue_text(manifest: dict) -> str:
@@ -29,10 +30,11 @@ def cue_text(manifest: dict) -> str:
 
 def assemble(
     manifest_path: Path, *, rom_path: Path | None = None, audio_dir: Path = AUDIO_DIR,
+    variant: BuildVariant = BuildVariant.PRODUCTION,
 ) -> Path:
     manifest = validate_manifest(manifest_path)
-    rom_path = rom_path or ROM_PATH
-    verify_modern(rom_path, strict_regression=True)
+    rom_path = rom_path or variant.rom_path
+    verify_modern(rom_path, strict_regression=True, variant=variant)
     basename = manifest.get("rom_basename")
     if (
         not isinstance(basename, str)
@@ -41,6 +43,7 @@ def assemble(
         or any(char in basename for char in '/\\')
     ):
         raise BuildError("rom_basename must be a non-empty filename-safe string")
+    basename = variant.package_basename(basename)
     destination = DIST / basename
     expected_names = {
         f"{basename}.md",

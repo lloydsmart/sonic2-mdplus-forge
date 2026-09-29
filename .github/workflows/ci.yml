@@ -80,3 +80,9 @@ jobs:
           PYTHONPATH=. python tests/check_modern_live_binary.py
       - name: Reject unsupported fixBugs layout
         run: PYTHONPATH=. python tests/check_modern_fixbugs.py
+      - name: Build and verify the isolated Bugfixed flavour
+        run: |
+          make rom-bugfixed
+          python -m tools.mdplus_builder verify-rom --bugfixed --strict-regression build/sonic2-mdplus-bugfixed.md
+          cmp build/sonic2-mdplus.md build/sonic2-mdplus-bugfixed.md
+          PYTHONPATH=. python tests/check_bugfixed_binary.py
