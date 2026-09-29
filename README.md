@@ -36,8 +36,13 @@ hardware verification. The optional missing-WAV robustness test was not run.
 
 The current production build and package commands use that exact hardware-tested
 ROM. Version 2.0.0 makes it the default while preserving its game and audio
-behavior. The previous implementation has since been retired; production is now
-the only supported build path.
+behavior. Production remains the default and hardware-qualified build.
+
+Bugfixed is a separate maintained build flavour with its own outputs. For this
+architectural change it deliberately remains byte-identical to Production:
+no new gameplay fixes are enabled. Actual bugfixes will be introduced separately
+after this build boundary is established. The previous implementation remains
+retired.
 
 ## What the build does
 
@@ -150,6 +155,53 @@ The builder clones committed input; it does not modify that local checkout.
 The module CLI is also available as `sonic2-mdplus` after installation.
 Run `make help` or add `--help` to an individual CLI command for its options.
 
+## Bugfixed build flavour
+
+Both flavours share the immutable pinned `build/source-modern/` dependency and
+all current MD+ source transformations. They prepare and build independently:
+
+| Output | Production (default) | Bugfixed |
+| --- | --- | --- |
+| Prepared source | `build/prepared-modern/` | `build/prepared-bugfixed/` |
+| ROM | `build/sonic2-mdplus.md` | `build/sonic2-mdplus-bugfixed.md` |
+| Package | `dist/Sonic 2 - Addryu Mega-CD Remix MD+/` | `dist/Sonic 2 - Addryu Mega-CD Remix MD+ (Bugfixed)/` |
+
+Build or package Bugfixed with:
+
+```sh
+make bootstrap
+make source-bugfixed
+make rom-bugfixed
+python3 -m tools.mdplus_builder verify-rom \
+  --bugfixed --strict-regression build/sonic2-mdplus-bugfixed.md
+make package-bugfixed
+# Or run all stages with locally purchased audio:
+make all-bugfixed INPUT_DIR="$PWD/inputs/audio"
+```
+
+The CLI adds `--bugfixed` to `prepare-source`, `build-rom`, `verify-rom`,
+`package` and `all`. Omitting it selects Production. Compatibility aliases
+remain Production-only; the historical `build/sonic2-modern-mdplus.md` symlink
+still points only to Production. There is no stock Bugfixed target.
+
+Bugfixed packaging reuses `build/audio/` and the unchanged track manifest.
+Its ROM and CUE basenames are both
+`Sonic 2 - Addryu Mega-CD Remix MD+ (Bugfixed)`. The two package directories
+coexist, as do both prepared directories and ROMs. Custom `build-rom --output`
+paths cannot target the other flavour's reserved ROM or prepared directory.
+`clean` still removes all ignored build and distribution outputs.
+
+Internally, `BuildVariant` selects prepared/ROM paths, the package suffix and a
+separate strict verification profile. The shared preparation/build functions
+retain one source transformation path. Both profiles currently enforce the
+Production identity below and share every fixed-layout, MD+ transaction and
+Z80 audit. Future audited Bugfixed identity/layout differences belong at this
+profile boundary; changing Bugfixed must never rebaseline Production.
+`fixBugs` stays `0`, `FixDriverBugs` stays off, and the Stage 4 Z80 image and
+`$FFF100-$FFF5FF` RAM reservation remain unchanged. No upstream Fixed Files or
+new gameplay/data fixes are applied. Bugfixed does not yet provide corrected
+gameplay.
+
 ## Earlier implementations
 
 Earlier Forge releases used `msu-md-sonic2` and a separately built ASL assembler.
@@ -227,7 +279,8 @@ The production build and packaging enforce the exact Stage 5 identity:
 - SHA-256: `bd12138cd478596e4d294a06f573a98a6d37747dfe58d726ca62cf50dc3a8c44`
 - 21 complete MD+ command transactions; unchanged Stage 3 backend and Stage 4 Z80
 
-`verify-rom` verifies the production implementation. Strict verification and
+`verify-rom` defaults to Production; `--bugfixed` selects its independent
+profile, currently requiring the same exact bytes. Strict verification and
 packaging reject stock ROMs and ROMs from earlier implementations.
 
 ## Adding tracks and loop points
@@ -311,12 +364,23 @@ PYTHONPATH=. build/emulation-venv/bin/python tests/check_modern_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_modern_handoff_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_modern_live_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_modern_fixbugs.py
+make source-bugfixed
+make rom-bugfixed
+python3 -m tools.mdplus_builder verify-rom \
+  --bugfixed --strict-regression build/sonic2-mdplus-bugfixed.md
+cmp build/sonic2-mdplus.md build/sonic2-mdplus-bugfixed.md
+sha256sum build/sonic2-mdplus.md build/sonic2-mdplus-bugfixed.md
+PYTHONPATH=. build/emulation-venv/bin/python tests/check_bugfixed_binary.py
 ```
 
 The binary suites check the exact production identity and execute compiled
 68000/Z80 instructions for the backend, handoff and live routing.
 `fixBugs=1` must be rejected by the fixed-layout assembly assertion. These tests
 do not model audible mixing, SD-card access or console bus timing.
+The Bugfixed binary check proves strict identity, independent profile selection,
+equal prepared source content and byte-for-byte ROM equality. CI retains all
+Production CPU suites and adds this structural check without duplicating those
+CPU suites for identical ROMs.
 
 The production ROM is byte-identical to the hardware-tested Stage 5 image, so
 its passed hardware gate also covers this release. The

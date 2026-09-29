@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 from tools.mdplus_builder import cli, package
 from tools.mdplus_builder.common import DEFAULT_MANIFEST, ROM_PATH, BuildError
+from tools.mdplus_builder.variants import BuildVariant
 
 
 class PublicSelectionTests(unittest.TestCase):
@@ -22,10 +23,10 @@ class PublicSelectionTests(unittest.TestCase):
             stack.enter_context(patch('builtins.print'))
             self.assertEqual(cli.main(['all', '--input-dir', 'inputs/audio']), 0)
             calls['bootstrap_modern'].assert_called_once_with(local_source=None)
-            calls['build_modern'].assert_called_once_with()
+            calls['build_modern'].assert_called_once_with(variant=BuildVariant.PRODUCTION)
             calls['build_stock_modern'].assert_not_called()
             calls['prepare_audio'].assert_called_once_with(DEFAULT_MANIFEST, Path('inputs/audio').resolve())
-            calls['assemble'].assert_called_once_with(DEFAULT_MANIFEST)
+            calls['assemble'].assert_called_once_with(DEFAULT_MANIFEST, variant=BuildVariant.PRODUCTION)
 
     def test_rom_commands_and_custom_output_select_current_source(self):
         for command in ('build-rom', 'build-modern'):
@@ -35,10 +36,13 @@ class PublicSelectionTests(unittest.TestCase):
             ):
                 self.assertEqual(cli.main([command]), 0)
                 self.assertEqual(modern.call_count, 1)
-                self.assertEqual(modern.call_args.args or (ROM_PATH,), (ROM_PATH,))
+                if command == 'build-modern':
+                    modern.assert_called_once_with()
+                else:
+                    modern.assert_called_once_with(None, variant=BuildVariant.PRODUCTION)
         with patch.object(cli, 'build_modern') as build, patch.object(cli, '_print_json'):
             self.assertEqual(cli.main(['build-rom', '--output', 'build/custom.md']), 0)
-            build.assert_called_once_with(Path('build/custom.md').resolve())
+            build.assert_called_once_with(Path('build/custom.md').resolve(), variant=BuildVariant.PRODUCTION)
 
     def test_bootstrap_and_prepare_aliases_select_current_source(self):
         for command, function in (
@@ -49,6 +53,8 @@ class PublicSelectionTests(unittest.TestCase):
                 self.assertEqual(cli.main([command]), 0)
                 if command.startswith('bootstrap'):
                     call.assert_called_once_with(local_source=None)
+                elif command == 'prepare-source':
+                    call.assert_called_once_with(variant=BuildVariant.PRODUCTION)
                 else:
                     call.assert_called_once_with()
 
@@ -70,7 +76,7 @@ class PublicSelectionTests(unittest.TestCase):
     def test_verification_uses_production_identity(self):
         with patch.object(cli, 'verify_modern') as verify, patch.object(cli, '_print_json'):
             self.assertEqual(cli.main(['verify-rom', '--strict-regression', 'build/test.md']), 0)
-            verify.assert_called_once_with(Path('build/test.md').resolve(), strict_regression=True)
+            verify.assert_called_once_with(Path('build/test.md').resolve(), strict_regression=True, variant=BuildVariant.PRODUCTION)
 
 
 class PackageSelectionTests(unittest.TestCase):
@@ -83,7 +89,7 @@ class PackageSelectionTests(unittest.TestCase):
             ):
                 with self.assertRaisesRegex(BuildError, 'wrong ROM'):
                     package.assemble(DEFAULT_MANIFEST, rom_path=rom)
-                verify.assert_called_once_with(rom or ROM_PATH, strict_regression=True)
+                verify.assert_called_once_with(rom or ROM_PATH, strict_regression=True, variant=BuildVariant.PRODUCTION)
                 copy.assert_not_called()
 
     def test_packaged_names_cue_audio_and_checksums_are_unchanged(self):
@@ -102,7 +108,7 @@ class PackageSelectionTests(unittest.TestCase):
             }]}))
             with patch.object(package, 'DIST', root / 'dist'), patch.object(package, 'verify_modern') as verify:
                 output = package.assemble(manifest, rom_path=rom, audio_dir=root)
-            verify.assert_called_once_with(rom, strict_regression=True)
+            verify.assert_called_once_with(rom, strict_regression=True, variant=BuildVariant.PRODUCTION)
             self.assertEqual({p.name for p in output.iterdir()},
                              {'Test MD+.md', 'Test MD+.cue', 'track03.wav', 'SHA256SUMS.json'})
             self.assertEqual((output / 'Test MD+.md').read_bytes(), rom.read_bytes())

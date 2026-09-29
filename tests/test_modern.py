@@ -3,11 +3,13 @@ from __future__ import annotations
 import hashlib
 import tempfile
 import unittest
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
-from tools.mdplus_builder import cli, modern, source
+from tools.mdplus_builder import cli, modern, source, variants
 from tools.mdplus_builder.common import DEPENDENCIES, ROM_PATH, BuildError, load_json
+from tools.mdplus_builder.variants import BuildVariant
 
 
 class ModernSourceTests(unittest.TestCase):
@@ -177,7 +179,7 @@ class ModernAdapterTests(unittest.TestCase):
     def test_prepare_recreates_clean_pinned_input_and_leaves_dependency_untouched(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            checkout, prepared = root / 'input', root / 'prepared'
+            checkout, prepared = root / 'input', root / 'prepared-modern'
             checkout.mkdir()
             (checkout / 's2.asm').write_bytes(b'local edits must not be used')
 
@@ -193,7 +195,7 @@ class ModernAdapterTests(unittest.TestCase):
             with (
                 patch.object(modern, 'BUILD', root),
                 patch.object(modern, 'SOURCE_MODERN_DIR', checkout),
-                patch.object(modern, 'PREPARED_MODERN_DIR', prepared),
+                patch.object(variants, 'BUILD', root),
                 patch.object(modern, '_git_output', return_value=modern.AUDITED_MODERN_COMMIT),
                 patch.object(modern, '_clone_at', side_effect=clone),
                 patch.object(modern, 'UPSTREAM_S2_SHA256', hashlib.sha256(self.fixture).hexdigest()),
@@ -242,12 +244,13 @@ class ModernAdapterTests(unittest.TestCase):
                 self.assertEqual(cli.main([command]), 0)
                 call.assert_called_once_with()
         with tempfile.TemporaryDirectory() as directory:
-            work = Path(directory)
+            work = Path(directory) / 'prepared-modern'
+            work.mkdir()
             output = work / 'output.md'
             output.write_bytes(b'previous output')
             (work / 's2built.bin').write_bytes(b'new output')
             with (
-                patch.object(modern, 'PREPARED_MODERN_DIR', work),
+                patch.object(variants, 'BUILD', Path(directory)),
                 patch.object(modern, 'ROM_PATH', output),
                 patch.object(modern, 'MODERN_ROM_PATH', work / 'compat.md'),
                 patch.object(modern, 'require_program', return_value='/usr/bin/lua'),
@@ -262,9 +265,9 @@ class ModernAdapterTests(unittest.TestCase):
                 with self.assertRaisesRegex(BuildError, 'invalid'):
                     modern.build_modern(output)
                 self.assertEqual(output.read_bytes(), b'previous output')
-                prepare.assert_called_once_with()
+                prepare.assert_called_once_with(variant=BuildVariant.PRODUCTION)
                 run.assert_called_with(['/usr/bin/lua', 'modern_build.lua'], cwd=work)
-                verify.assert_called_once_with(work / 's2built.bin', strict_regression=True)
+                verify.assert_called_once_with(work / 's2built.bin', strict_regression=True, variant=BuildVariant.PRODUCTION)
                 verify.side_effect = None
                 verify.return_value = {'size': 10}
                 self.assertEqual(modern.build_modern(output), {'source_commit': 'pin', 'size': 10})
@@ -374,17 +377,30 @@ class ModernBinaryVerificationTests(unittest.TestCase):
             path = Path(directory) / 'synthetic.md'
             path.write_bytes(data)
             result = modern.verify_modern(path)
-            with self.assertRaisesRegex(BuildError, 'Stage 5 production target'):
+            with self.assertRaisesRegex(BuildError, 'Production verification failed for .*Stage 5 target'):
                 modern.verify_modern(path, strict_regression=True)
-            with (
-                patch.object(modern, 'PRODUCTION_CHECKSUM', result['header_checksum']),
-                patch.object(modern, 'PRODUCTION_MD5', result['md5']),
-                patch.object(modern, 'PRODUCTION_SHA256', result['sha256']),
-            ):
+            profile = modern.VERIFICATION_PROFILES[BuildVariant.PRODUCTION]
+            synthetic = replace(profile, checksum=result['header_checksum'],
+                                md5=result['md5'], sha256=result['sha256'])
+            with patch.dict(modern.VERIFICATION_PROFILES, {BuildVariant.PRODUCTION: synthetic}):
                 self.assertEqual(modern.verify_modern(path, strict_regression=True), result)
-                for field in ('PRODUCTION_CHECKSUM', 'PRODUCTION_MD5', 'PRODUCTION_SHA256'):
-                    with patch.object(modern, field, 'bad'), self.assertRaises(BuildError):
+                for field in ('checksum', 'md5', 'sha256'):
+                    with (
+                        patch.dict(modern.VERIFICATION_PROFILES, {
+                            BuildVariant.PRODUCTION: replace(synthetic, **{field: 'bad'}),
+                        }),
+                        self.assertRaises(BuildError),
+                    ):
                         modern.verify_modern(path, strict_regression=True)
+            for variant in BuildVariant:
+                cause = 'Modern loaded Z80 bytes differ from audited driver'
+                with (
+                    patch.object(modern, 'verify_modern_driver', side_effect=BuildError(cause)),
+                    self.assertRaises(BuildError) as failure,
+                ):
+                    modern.verify_modern(path, variant=variant)
+                self.assertIn(f'{variant.value.capitalize()} verification failed for {path}:', str(failure.exception))
+                self.assertIn(cause, str(failure.exception))
             modern.verify_modern_driver(data, b'\xc9')
             with self.assertRaisesRegex(BuildError, 'assembler object'):
                 modern.verify_modern_driver(data, b'incomplete object')

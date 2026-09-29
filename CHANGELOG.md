@@ -7,6 +7,17 @@ Versioning for its own tooling releases.
 
 ## [Unreleased]
 
+### Added
+
+- Introduce a separate Bugfixed build flavour selected with `--bugfixed` or
+  `source-bugfixed`, `rom-bugfixed`, `package-bugfixed` and `all-bugfixed` Make
+  targets. Prepared source, ROM and package outputs coexist with Production;
+  both reuse the pinned dependency and prepared audio. A separate strict
+  verification profile and CI byte-equality check establish the build boundary.
+  Production remains the default hardware-qualified build with unchanged names
+  and compatibility aliases. Bugfixed deliberately produces the same ROM bytes
+  for now; actual bugfixes will be introduced separately.
+
 ### Removed
 
 - Retire the `msu-md-sonic2` / separately built ASL fallback, its dependency

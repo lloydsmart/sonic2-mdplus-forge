@@ -4,10 +4,12 @@ import hashlib
 import re
 import shutil
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 
 from .common import BUILD, DEPENDENCIES, ROM_PATH, BuildError, load_json, require_program, run
 from .source import ADDRYU_TRACKS, _clone_at, _git_output
+from .variants import BuildVariant
 
 SOURCE_MODERN_DIR = BUILD / "source-modern"
 STOCK_MODERN_ROM_PATH = BUILD / "sonic2-stock-modern.md"
@@ -66,7 +68,7 @@ def build_stock_modern() -> dict[str, str | int]:
 # Stage 2 is audited independently of the untouched stock build above.
 AUDITED_MODERN_COMMIT = "380f37a731bfc720bb0371a35a593184a7ec5e43"
 UPSTREAM_S2_SHA256 = "448630bb22c08b5281d143438296e5b9045f6539699ec3724147a7f945c938b9"
-PREPARED_MODERN_DIR = BUILD / "prepared-modern"
+PREPARED_MODERN_DIR = BuildVariant.PRODUCTION.prepared_dir
 MODERN_ROM_PATH = BUILD / "sonic2-modern-mdplus.md"
 PLAY_MUSIC_ADDRESS = 0x135E
 IMPLEMENTATION_ADDRESS = 0x100000
@@ -74,6 +76,33 @@ PREPARED_ROM_SIZE = 0x200000
 PRODUCTION_CHECKSUM = "BE41"
 PRODUCTION_MD5 = "9eb40c0601a7c424a0d1ce168b5f40f2"
 PRODUCTION_SHA256 = "bd12138cd478596e4d294a06f573a98a6d37747dfe58d726ca62cf50dc3a8c44"
+
+
+@dataclass(frozen=True)
+class VerificationProfile:
+    """Variant identity; both variants currently use the same fixed layout audit.
+
+    Future audited layout differences belong at this profile boundary, alongside
+    the identity, rather than bypassing the common verification machinery.
+    """
+
+    size: int
+    checksum: str
+    md5: str
+    sha256: str
+
+
+VERIFICATION_PROFILES = {
+    BuildVariant.PRODUCTION: VerificationProfile(
+        PREPARED_ROM_SIZE, PRODUCTION_CHECKSUM, PRODUCTION_MD5, PRODUCTION_SHA256,
+    ),
+    # An independent expectation: future Bugfixed changes must not rebaseline Production.
+    BuildVariant.BUGFIXED: VerificationProfile(
+        2_097_152, "BE41", "9eb40c0601a7c424a0d1ce168b5f40f2",
+        "bd12138cd478596e4d294a06f573a98a6d37747dfe58d726ca62cf50dc3a8c44",
+    ),
+}
+
 NATIVE_PLAY_MUSIC = bytes.fromhex("4a38ffe0660611c0ffe04e7511c0ffe44e75")
 ROUTER_ADDRESS = 0x1003A8
 HOOK_BYTES = bytes.fromhex("4ef9") + ROUTER_ADDRESS.to_bytes(4, "big") + bytes.fromhex("4e71") * 6
@@ -328,8 +357,9 @@ def _prepare_modern_source(data: bytes, filename: str = "s2.asm") -> bytes:
     return text.encode("utf-8")
 
 
-def prepare_modern() -> dict[str, str]:
+def prepare_modern(*, variant: BuildVariant = BuildVariant.PRODUCTION) -> dict[str, str]:
     """Recreate generated preparation from committed inputs, never from old output."""
+    prepared_dir = variant.prepared_dir
     dependency = load_json(DEPENDENCIES)["source_modern"]
     if dependency["commit"] != AUDITED_MODERN_COMMIT:
         raise BuildError("Modern adapter requires the audited pinned commit")
@@ -338,7 +368,7 @@ def prepare_modern() -> dict[str, str]:
     head = _git_output(SOURCE_MODERN_DIR, "rev-parse", "HEAD")
     if head != dependency["commit"]:
         raise BuildError(f"{SOURCE_MODERN_DIR} is at {head}, expected {dependency['commit']}")
-    with tempfile.TemporaryDirectory(prefix="prepare-modern-", dir=BUILD) as directory:
+    with tempfile.TemporaryDirectory(prefix=f"prepare-{variant.value}-", dir=BUILD) as directory:
         work = Path(directory) / "source"
         _clone_at(dependency["url"], dependency["commit"], work, SOURCE_MODERN_DIR)
         for filename in ("s2.asm", "s2.sounddriver.asm", "s2.constants.asm"):
@@ -353,10 +383,10 @@ def prepare_modern() -> dict[str, str]:
                        Path(__file__).with_name(filename).read_text(encoding="utf-8"))
             (work / filename).write_text(content, encoding="utf-8")
         # Only this generated output is replaced; dependency checkouts are inputs.
-        if PREPARED_MODERN_DIR.exists():
-            shutil.rmtree(PREPARED_MODERN_DIR)
-        work.rename(PREPARED_MODERN_DIR)
-    return {"source_commit": head, "prepared_source": str(PREPARED_MODERN_DIR)}
+        if prepared_dir.exists():
+            shutil.rmtree(prepared_dir)
+        work.rename(prepared_dir)
+    return {"source_commit": head, "prepared_source": str(prepared_dir)}
 
 
 HANDOFF_ADDRESSES = {
@@ -529,7 +559,9 @@ def verify_modern_driver(data: bytes, assembled: bytes | None = None) -> dict[st
             "z80_loaded_sha256": hashlib.sha256(loaded).hexdigest()}
 
 
-def verify_modern(path: Path, *, strict_regression: bool = False) -> dict[str, str | int]:
+def _verify_modern(
+    path: Path, *, strict_regression: bool = False, variant: BuildVariant = BuildVariant.PRODUCTION,
+) -> dict[str, str | int]:
     """Audit the live router, frozen backends, and every unchanged stock byte."""
     from .source import genesis_checksum
 
@@ -537,8 +569,9 @@ def verify_modern(path: Path, *, strict_regression: bool = False) -> dict[str, s
         data = path.read_bytes()
     except OSError as exc:
         raise BuildError(f"Cannot read modern MD+ ROM {path}: {exc}") from exc
-    if len(data) != PREPARED_ROM_SIZE:
-        raise BuildError(f"Modern MD+ ROM size is {len(data)}, expected {PREPARED_ROM_SIZE}")
+    profile = VERIFICATION_PROFILES[variant]
+    if len(data) != profile.size:
+        raise BuildError(f"Modern MD+ ROM size is {len(data)}, expected {profile.size}")
     stored, calculated = genesis_checksum(data)
     if stored != calculated:
         raise BuildError(f"Modern checksum mismatch: stored {stored:04X}, calculated {calculated:04X}")
@@ -624,29 +657,56 @@ def verify_modern(path: Path, *, strict_regression: bool = False) -> dict[str, s
     }
     if strict_regression and (
         result["header_checksum"], result["md5"], result["sha256"]
-    ) != (PRODUCTION_CHECKSUM, PRODUCTION_MD5, PRODUCTION_SHA256):
-        raise BuildError(f"Modern ROM differs from the audited Stage 5 production target: {result}")
+    ) != (profile.checksum, profile.md5, profile.sha256):
+        raise BuildError(f"Modern ROM differs from the audited Stage 5 target: {result}")
     return result
 
 
-def build_modern(output: Path = ROM_PATH) -> dict[str, str | int]:
+def verify_modern(
+    path: Path, *, strict_regression: bool = False, variant: BuildVariant = BuildVariant.PRODUCTION,
+) -> dict[str, str | int]:
+    """Verify a selected ROM and retain the underlying diagnostic on failure."""
+    try:
+        return _verify_modern(path, strict_regression=strict_regression, variant=variant)
+    except BuildError as exc:
+        raise BuildError(f"{variant.value.capitalize()} verification failed for {path}: {exc}") from exc
+
+
+def build_modern(
+    output: Path | None = None, *, variant: BuildVariant = BuildVariant.PRODUCTION,
+) -> dict[str, str | int]:
+    output = output or variant.rom_path
+    # A custom output must not defeat flavour isolation, including via the
+    # historical Production symlink or a path inside the other prepared tree.
+    resolved = output.resolve()
+    for other in BuildVariant:
+        if other is variant:
+            continue
+        reserved = [other.rom_path]
+        if other is BuildVariant.PRODUCTION:
+            reserved.append(MODERN_ROM_PATH)
+        if (resolved.is_relative_to(other.prepared_dir.resolve())
+                or any(resolved == path.resolve() or
+                       (output.exists() and path.exists() and output.samefile(path)) for path in reserved)):
+            raise BuildError(f"ROM output belongs to {other.value}: {output}")
     lua = require_program("lua")
     run([lua, "-e", 'local major, minor = _VERSION:match("(%d+)%.(%d+)"); '
          'assert(tonumber(major) > 5 or (tonumber(major) == 5 and tonumber(minor) >= 3), '
          '"Modern MD+ build requires Lua 5.3 or newer")'])
-    preparation = prepare_modern()
-    run([lua, "modern_build.lua"], cwd=PREPARED_MODERN_DIR)
-    built = PREPARED_MODERN_DIR / "s2built.bin"
-    result = verify_modern(built, strict_regression=True)
-    verify_modern_driver(built.read_bytes(), assembled_modern_driver(PREPARED_MODERN_DIR / "forge-s2.p"))
-    symbols = modern_symbols(PREPARED_MODERN_DIR / "s2.lst")
+    prepared_dir = variant.prepared_dir
+    preparation = prepare_modern(variant=variant)
+    run([lua, "modern_build.lua"], cwd=prepared_dir)
+    built = prepared_dir / "s2built.bin"
+    result = verify_modern(built, strict_regression=True, variant=variant)
+    verify_modern_driver(built.read_bytes(), assembled_modern_driver(prepared_dir / "forge-s2.p"))
+    symbols = modern_symbols(prepared_dir / "s2.lst")
     for name, address in (HANDOFF_ADDRESSES | ROUTER_ADDRESSES |
                           {n: a for n, (a, _) in RAM_STATE.items()}).items():
         if symbols.get(name) != address:
             raise BuildError(f"Modern audited symbol moved: {name}")
     output.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(built, output)
-    if output == ROM_PATH:
+    if variant is BuildVariant.PRODUCTION and output == ROM_PATH:
         # Preserve the old development filename without a second ROM copy.
         MODERN_ROM_PATH.unlink(missing_ok=True)
         MODERN_ROM_PATH.symlink_to(ROM_PATH.name)
