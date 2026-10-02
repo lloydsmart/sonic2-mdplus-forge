@@ -49,10 +49,30 @@ ARZ_PILLAR_FIXED = ARZ_PILLAR_OLD.replace(
     "\tsubq.w\t#8,d2\n"
     "    endif\n",
 )
+# Obj82 already compensates walking collision for its larger pillar display
+# radius. Derive both collision heights from the retail radius, without growth.
+ARZ_OBJ82_OLD = ("\taddi.w\t#$B,d1\n"
+                 "\tmoveq\t#0,d2\n"
+                 "\tmove.b\ty_radius(a0),d2\n"
+                 "\tmove.w\td2,d3\n"
+                 "\taddq.w\t#1,d3\n"
+                 "    if fixBugs\n"
+                 "\ttst.b\tmapping_frame(a0)\t; is this a pillar?\n"
+                 "\tbeq.s\t.notPillar\t\t; if not, branch\n"
+                 "\tsubq.w\t#2,d3\n\n"
+                 ".notPillar:\n"
+                 "    endif\n"
+                 "\tjsrto\tJmpTo23_SolidObject")
+ARZ_OBJ82_FIXED = ARZ_OBJ82_OLD.replace(
+    "\tmove.w\td2,d3\n\taddq.w\t#1,d3\n", "",
+).replace("\tsubq.w\t#2,d3\n", "\tsubq.w\t#2,d2\n").replace(
+    "    endif\n\tjsrto\tJmpTo23_SolidObject",
+    "    endif\n\tmove.w\td2,d3\n\taddq.w\t#1,d3\n\tjsrto\tJmpTo23_SolidObject",
+)
 STOCK_BUGFIXED_SIZE = 2_097_152
-STOCK_BUGFIXED_CHECKSUM = "FDED"
-STOCK_BUGFIXED_MD5 = "46c95382536445188cdb0d63e4d7e305"
-STOCK_BUGFIXED_SHA256 = "51263146131fa2dd70b2fa4c4b5701c6eb7d72d6683bf032358163716bf4ac81"
+STOCK_BUGFIXED_CHECKSUM = "FDEC"
+STOCK_BUGFIXED_MD5 = "9a0fd894e5fd5e85a354d2578fab7421"
+STOCK_BUGFIXED_SHA256 = "7e8fe718aea8344dfe32931097977c0661bc0dbc9c41cba60e7b7a5e12be933f"
 
 # Exact context anchors, not a rewrite of arbitrary fixBugs expressions.
 # The two normal VInt upload paths deliberately share one anchor (count 2).
@@ -92,6 +112,7 @@ def transform_source(data: bytes, filename: str) -> bytes:
                               "\nFixMusicAndSFXDataBugs = 0\n")
         text = _replace_exact(text, MCZ_RIGHT_DRILL_OLD, MCZ_RIGHT_DRILL_FIXED)
         text = _replace_exact(text, ARZ_PILLAR_OLD, ARZ_PILLAR_FIXED)
+        text = _replace_exact(text, ARZ_OBJ82_OLD, ARZ_OBJ82_FIXED)
     elif filename == "s2.sounddriver.asm":
         text = _replace_exact(text, "\nFixDriverBugs = fixBugs\n", "\nFixDriverBugs = 0\n")
     for pattern, count in PAGE_FLIP_PATTERNS.get(filename, ()):

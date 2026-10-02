@@ -40,7 +40,8 @@ behavior. Production remains the default and hardware-qualified build.
 
 Bugfixed integrates the frozen [curated source policy](docs/BUGFIXED.md) with
 Forge MD+, using isolated outputs and its own audited ROM identity and layout.
-It is **hardware-qualified on MiSTer Mega Drive core `26.06.03`**. Z80 driver fixes,
+The current Obj82-corrected hash is **hardware-qualified on MiSTer Mega Drive
+core `26.06.03`** after targeted ARZ testing. Z80 driver fixes,
 music/SFX data fixes, the alternate 2P sprite mechanism and Fixed Files remain
 excluded. Production retains its exact Stage 5 identity.
 
@@ -201,24 +202,37 @@ stays at `$100000`. Each profile checks its own hooks, loader, compressed driver
 and reference baseline. Both preserve the same Forge RAM allocation and all
 21 short-lived MD+ command transactions, activated only after startup checksum.
 
-Bugfixed MD+ is 2,097,152 bytes, checksum `6B57`, MD5
-`cbcae2d2153ff7814347bd0013aefde5`, SHA-256
-`f80d983bdc44d5d89f3f7556e644a5b0ff5bf6e519ddacf0a3df73d4406449dc`.
+Bugfixed MD+ is 2,097,152 bytes, checksum `6B56`, MD5
+`517f2be577e365296e900cfc04a77782`, SHA-256
+`d16689760d3c913ff795c7f3b1c3c98b8ad789fb95efdbd50efaa4cd7f95f621`.
 The revised curated policy retains upstream's ARZ Rising Pillar culling fix
 (explicit height, width `$1C`, display radius `$20`) while subtracting eight
 pixels only from its vertical collision half-height, restoring retail jumps at
 every rising stage. This narrowly corrects the gameplay regression found on
 MiSTer. Production and all audio/loop policy remain unchanged.
 
-The pre-correction SHA-256
-`8101cf55fcd20ee573be524b1e5e05f5aaecc31560832ffdc136543a5d8e26d6`
-passed a full 1P playthrough and a comprehensive 2P soak on core `26.06.03`,
-with only the ARZ pillar issue reported. After the narrow Obj2B correction,
-software audits proved unrelated Forge, Z80, sound, RAM and 2P machinery
-unchanged. Targeted revalidation of the exact revised `f80d983b...` ROM then
-passed in both ARZ acts and an EHZ 2P sample on the same core. The revised hash
-is now **hardware-qualified**; the full-game playthrough and comprehensive
-four-zone 2P soak remain evidence from the pre-correction hash.
+Obj82 has a separate correction discovered through source/compiled analysis: upstream enlarges
+its pillar display radius `$30->$32` and compensates walking collision `d3`,
+but jumping collision `d2` remains `$32`. Forge subtracts two from `d2` before
+deriving `d3`, retaining `$32` rendering/culling and retail collision `$30/$31`.
+The change is 18 bytes before and after, with no downstream address movement.
+The exact current ROM has now passed targeted MiSTer ARZ testing: Act 1 subtype
+`$10` and Act 2 subtype `$11` jump/contact, standing, walking, side collision and
+culling checks, plus Act 2 waiting/falling and standing while falling. ARZ MD+
+playback/looping, pause/unpause, invincibility recovery and Act 2 boss-music
+transition/restoration also passed, alongside an Act 1 Obj2B regression check
+of standing on top while the pillar rises. No hardware regression was observed.
+
+The preceding Obj2B-corrected MD+ SHA-256
+`f80d983bdc44d5d89f3f7556e644a5b0ff5bf6e519ddacf0a3df73d4406449dc`
+passed targeted ARZ and EHZ 2P tests on core `26.06.03`. The earlier
+`8101cf55...` identity passed a full 1P playthrough and comprehensive 2P soak,
+with the Obj2B pillar issue reported. Those remain historical integration
+evidence. The current `d1668976...` qualification follows the local size-neutral
+Obj82 correction and successful targeted ARZ tests; it does not claim another
+full 1P playthrough or comprehensive 2P soak. The
+[concrete ARZ placements](docs/BUGFIXED.md#obj82-hardware-test-placements)
+remain documented for repeat testing.
 
 See [software validation and layout evidence](docs/BUGFIXED.md#forge-md-software-validation)
 for source integrity, exact hooks and bank relocations, and

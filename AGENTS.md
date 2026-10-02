@@ -16,7 +16,8 @@ or generated MiSTer packages.
   identity and compatibility symlink unchanged. Bugfixed integrates the frozen
   curated policy in `docs/BUGFIXED.md` with Forge MD+ and has its own strict
   identity, layout and isolated prepared, ROM and package outputs. It is
-  hardware-qualified on MiSTer Mega Drive core `26.06.03`. Reuse `apply_policy`;
+  hardware-qualified on MiSTer Mega Drive core `26.06.03` after targeted Obj82
+  testing. Reuse `apply_policy`;
   do not reconstruct or change the curated policy inside the Forge adapter. Keep Z80
   and music/SFX data fixes off, exclude Fixed Files and the complete alternate
   2P sprite mechanism, and preserve the `$FFF100-$FFF5FF` RAM hole and Forge

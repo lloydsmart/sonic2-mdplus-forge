@@ -12,13 +12,14 @@ The maintained builds have distinct policies and verification profiles:
 | Stock Production reference | Untouched pinned REV01 | None |
 | Stock Bugfixed reference | Curated game fixes described here | None |
 | Production MD+ | Pristine retail policy | Hardware-qualified Stage 5 |
-| Bugfixed MD+ | Exact curated policy described here | Hardware-qualified on MiSTer core `26.06.03`, separate layout |
+| Bugfixed MD+ | Exact curated policy described here | Hardware-qualified on MiSTer core `26.06.03` |
 
 `rom-bugfixed` and its package now integrate curated gameplay fixes with Forge
 MD+. Production remains the default hardware-qualified build with its exact
-Stage 5 identity. **The revised Bugfixed MD+ hash is hardware-qualified on
-MiSTer Mega Drive core `26.06.03`.** The exact identity and evidence chain are
-recorded below.
+Stage 5 identity. **The current Obj82-corrected hash is hardware-qualified on
+MiSTer Mega Drive core `26.06.03` after targeted ARZ testing.** The preceding
+Obj2B qualification and earlier broad 1P/2P results remain historical evidence;
+the exact identities, test scope and evidence chain are recorded below.
 
 ## Initial policy
 
@@ -173,6 +174,196 @@ It emits the original `$500`-byte unused reservation starting at `$FFF100`.
 sprite-table spill area remains the retail `$80` bytes. The Forge RAM hole is
 available for later integration; it is not allocated to Forge in this reference.
 
+## Obj82 collision preservation
+
+This follow-up leaves the hardware-qualified Obj2B correction exactly as above.
+Upstream's Obj82 culling fix enables `explicit_height`, retains width `$1C`
+and enlarges pillar display `y_radius` from `$30` to `$32`. Its existing
+`subq.w #2,d3` restores retail walking collision `$31`, but jumping collision
+`d2` remains `$32`. Forge moves the compensation before `move.w d2,d3`,
+subtracting from `d2` so both collision values derive from retail `$30`.
+Rendering/culling still uses the stored `$32` radius. Frame zero skips the
+subtraction. Obj82 was discovered through source/compiled analysis, then
+validated on MiSTer after correction. Obj2B was originally discovered from
+observed hardware gameplay behaviour. The targeted current-ROM results below
+qualify the corrected behaviour without claiming a hardware reproduction of
+the preceding Obj82 jumping-height difference.
+
+Exact source before (between the unchanged width setup and SolidObject call):
+
+```asm
+    moveq   #0,d2
+    move.b  y_radius(a0),d2
+    move.w  d2,d3
+    addq.w  #1,d3
+    if fixBugs
+    tst.b   mapping_frame(a0) ; is this a pillar?
+    beq.s   .notPillar       ; if not, branch
+    subq.w  #2,d3
+
+.notPillar:
+    endif
+    jsrto   JmpTo23_SolidObject
+```
+
+Exact source after (only instruction order and subtraction destination change):
+
+```asm
+    moveq   #0,d2
+    move.b  y_radius(a0),d2
+    if fixBugs
+    tst.b   mapping_frame(a0) ; is this a pillar?
+    beq.s   .notPillar       ; if not, branch
+    subq.w  #2,d2
+
+.notPillar:
+    endif
+    move.w  d2,d3
+    addq.w  #1,d3
+    jsrto   JmpTo23_SolidObject
+```
+
+The authoritative policy validates the pristine source hash and requires one
+exact contextual anchor, including `addi.w #$B,d1` and the SolidObject call.
+Missing, duplicate, already-corrected and unexpected anchors fail closed;
+unit tests check both the hash gate and contextual gate. The Forge adapter
+continues to consume `apply_policy` and validate the post-policy source hash.
+
+### Compiled evidence and layout
+
+Stock Bugfixed and Bugfixed MD+ independently emit the same reordered sequence
+at `$02A700-$02A712` (exclusive end), **18 bytes before and after**:
+
+```text
+Before: 7400 1428 0016 3602 5243 4A28 001A 6702 5543
+After:  7400 1428 0016 4A28 001A 6702 5542 3602 5243
+```
+
+The unchanged SolidObject call at `$02A712` is `6100 01A6`. Ten instruction
+bytes differ; the only other ROM difference is the checksum low byte at
+`$00018F` (stock `ED->EC`, MD+ `57->56`). Exact instruction byte changes:
+
+| Address | Before | After |
+| --- | --- | --- |
+| `$02A706` | `36` | `4A` |
+| `$02A707` | `02` | `28` |
+| `$02A708` | `52` | `00` |
+| `$02A709` | `43` | `1A` |
+| `$02A70A` | `4A` | `67` |
+| `$02A70B` | `28` | `02` |
+| `$02A70C` | `00` | `55` |
+| `$02A70D` | `1A` | `42` |
+| `$02A70E` | `67` | `36` |
+| `$02A710` | `55` | `52` |
+
+Complete listing symbol-table comparisons find one changed entry in each
+Bugfixed build: `last_btst_converted.notPillar`, `$02A712->$02A70E` (-4),
+because that local branch target now precedes the two `d3` instructions.
+No symbol is added or removed. All other symbol values, downstream object
+addresses, alignment/padding, mappings, sound banks, RAM and Forge locations
+are unchanged. No frozen address values were updated.
+
+Compiled tests initialize valid subtypes `$10` and `$11` and execute
+`Obj82_Main` to the real `SolidObject` entry in all three images:
+
+| Image / valid frame | Explicit height | Width | Display radius | `d1` | `d2` | `d3` |
+| --- | --- | --- | --- | --- | --- | --- |
+| Retail pillar / 1 | Off | `$1C` | `$30` | `$27` | `$30` | `$31` |
+| Corrected stock Bugfixed pillar / 1 | On | `$1C` | `$32` | `$27` | `$30` | `$31` |
+| Corrected Bugfixed MD+ pillar / 1 | On | `$1C` | `$32` | `$27` | `$30` | `$31` |
+| Retail non-pillar / 0 | Off | `$20` | `$08` | `$2B` | `$08` | `$09` |
+| Both corrected non-pillar images / 0 | On | `$20` | `$08` | `$2B` | `$08` | `$09` |
+
+The valid non-pillar tests use `$00` and `$01`; no two-pixel subtraction occurs.
+Display state remains unchanged at the collision call. Executing the saved
+merged stock Bugfixed output independently confirms the uncorrected pillar
+inputs `d1=$27,d2=$32,d3=$31`; no extra upstream fixture is retained.
+Obj2B's compiled initialization, all seven heights, horizontal collision and
+actual rising-step tests remain unchanged and pass in all three images.
+
+### Identity transition and reproduction
+
+Both stock and MD+ Bugfixed remain 2,097,152 bytes with matching stored and
+calculated checksums. The identities before this follow-up are historical:
+
+| Field | Stock before | Stock after |
+| --- | --- | --- |
+| Checksum | `FDED` | `FDEC` |
+| MD5 | `46c95382536445188cdb0d63e4d7e305` | `9a0fd894e5fd5e85a354d2578fab7421` |
+
+Stock SHA-256 before:
+`51263146131fa2dd70b2fa4c4b5701c6eb7d72d6683bf032358163716bf4ac81`.
+Stock SHA-256 after:
+`7e8fe718aea8344dfe32931097977c0661bc0dbc9c41cba60e7b7a5e12be933f`.
+
+| Field | MD+ before | MD+ after |
+| --- | --- | --- |
+| Checksum | `6B57` | `6B56` |
+| MD5 | `cbcae2d2153ff7814347bd0013aefde5` | `517f2be577e365296e900cfc04a77782` |
+
+MD+ SHA-256 before:
+`f80d983bdc44d5d89f3f7556e644a5b0ff5bf6e519ddacf0a3df73d4406449dc`.
+MD+ SHA-256 after:
+`d16689760d3c913ff795c7f3b1c3c98b8ad789fb95efdbd50efaa4cd7f95f621`.
+
+The masked curated digest changes from
+`1eccd7628d0481f119dcc8c3cabd5772a6d0f4625d6bd6dc0b2b828ee553dee4` to
+`66d560a1698458738f98226f8e1460ba80724b0241cb7fab54777ec2e57ca71e`.
+Deleted-output rebuilds and a disposable Linux copy with freshly fetched inputs
+reproduce all four ROMs. Production MD+ and retail stock remain byte-identical.
+All Forge code, RAM, sixteen routes, 21 transactions, signature counts and
+stop/ACK, pause, extra-life and speed-shoes CPU regressions remain unchanged.
+Complete compressed and loaded Bugfixed Forge Z80 bytes are identical before
+and after, with the hashes and 34-byte address-derived analysis below unchanged.
+Packages coexist; the revised Bugfixed ROM is included while all sixteen WAVs,
+its CUE and the complete Production package retain their previous bytes.
+
+### Obj82 hardware-test placements
+
+These are all Obj82 entries in the normal pinned `level/objects/ARZ_1.bin`
+and `ARZ_2.bin`, not the excluded Fixed Files replacements. `ChkLoadObj`
+loads six-byte entries and masks Y with `$FFF`; each listed ID byte is `$82`.
+`Obj82_Init` selects property byte offset `(subtype >> 3) & $E` and mapping
+frame `offset >> 1`. All entries below select offset 2, frame 1, width `$1C`
+and Bugfixed radius `$32`, so **every placement exercises this correction**.
+Coordinates are the loaded object centres in level pixels, shown in hexadecimal.
+
+| Act | Object-list byte offset | X | Y | Subtype | Property offset / frame | `$32` pillar |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | `$0210` | `$17A0` | `$0525` | `$10` | 2 / 1 | Yes |
+| 1 | `$0234` | `$1815` | `$0541` | `$10` | 2 / 1 | Yes |
+| 2 | `$0012` | `$0340` | `$0520` | `$11` | 2 / 1 | Yes |
+| 2 | `$001E` | `$03C0` | `$0520` | `$11` | 2 / 1 | Yes |
+| 2 | `$0024` | `$0440` | `$0520` | `$11` | 2 / 1 | Yes |
+| 2 | `$002A` | `$04C0` | `$0520` | `$11` | 2 / 1 | Yes |
+| 2 | `$0036` | `$0540` | `$0520` | `$11` | 2 / 1 | Yes |
+| 2 | `$017A` | `$0CE5` | `$0616` | `$10` | 2 / 1 | Yes |
+| 2 | `$032A` | `$1682` | `$0648` | `$11` | 2 / 1 | Yes |
+| 2 | `$0336` | `$1704` | `$062C` | `$10` | 2 / 1 | Yes |
+| 2 | `$0378` | `$1870` | `$0510` | `$11` | 2 / 1 | Yes |
+| 2 | `$038A` | `$18F0` | `$0510` | `$11` | 2 / 1 | Yes |
+| 2 | `$03D2` | `$1A68` | `$076E` | `$11` | 2 / 1 | Yes |
+| 2 | `$041A` | `$1C00` | `$04C0` | `$10` | 2 / 1 | Yes |
+| 2 | `$0474` | `$1F50` | `$0254` | `$10` | 2 / 1 | Yes |
+
+Subtype `$10` becomes stationary movement type 0 after initialization. `$11`
+becomes type 1: standing starts the `$1E`-tick wait, then type 2 falls under
+gravity. Unused property entries 4/6 have no valid mapping and are not test cases.
+There are no frame-zero Obj82 placements in these two object lists.
+
+Repeatable targeted MiSTer checklist for the exact current MD+ SHA-256:
+
+- Start with Act 2's `$0340-$0540`, Y `$0520` group; compare ordinary jump contact
+  and clearance against retail before standing triggers the falling behaviour.
+- Check standing/walking contact and side collision there; confirm the waiting
+  and falling transitions still work and visibility/culling remains normal.
+- Check stationary subtype `$10` in Act 1 at `$17A0,$0525` and `$1815,$0541`,
+  then Act 2 at `$0CE5,$0616` (or the other stationary entries above). Compare
+  jumping contact with retail and confirm standing height and culling.
+- Recheck the already-qualified Obj2B rising pillars, plus ARZ MD+ playback,
+  pause/unpause and one native-music transition. Record the tested hash, core
+  version and results separately from the qualification results below.
+
 ## Reproducible preparation and build
 
 ```sh
@@ -218,9 +409,9 @@ The untouched `verify_stock_modern()` audit is unchanged.
 | Field | Stock Bugfixed reference |
 | --- | --- |
 | Size | `2,097,152` bytes |
-| Stored / calculated Mega Drive checksum | `FDED` / `FDED` |
-| MD5 | `46c95382536445188cdb0d63e4d7e305` |
-| SHA-256 | `51263146131fa2dd70b2fa4c4b5701c6eb7d72d6683bf032358163716bf4ac81` |
+| Stored / calculated Mega Drive checksum | `FDEC` / `FDEC` |
+| MD5 | `9a0fd894e5fd5e85a354d2578fab7421` |
+| SHA-256 | `7e8fe718aea8344dfe32931097977c0661bc0dbc9c41cba60e7b7a5e12be933f` |
 
 The corrected MCZ and ARZ source established these revised constants. Rebuilding from a
 pristine clone after freezing them, then deleting and recreating the published
@@ -340,7 +531,7 @@ Production's existing constants remain compatibility aliases.
 
 | File | Required curated SHA-256 before Forge adaptation |
 | --- | --- |
-| `s2.asm` | `bcfdb7a6738bb673d59f42e7d5b77db7f8998bea40fe367c6221c317799da3d6` |
+| `s2.asm` | `a5e234708be87f5b984d05f6bd4596a28ee792e210822cacd8ed346a9ea8f61f` |
 | `s2.constants.asm` | `e6fac75b24da9ecbd2a11ab7d474a3fe1426afa134ef41d9170202f95e77ac54` |
 | `s2.sounddriver.asm` | `ce96d9dda766fefa33de23ddccea373b58aceb92ec2a91fba30d998105d667a8` |
 
@@ -451,7 +642,7 @@ bytes. Its exact curated original footprint is:
 ```
 
 The compressed-length word at `$0ED050` changes from `0f66` (3,942) to `0fab`
-(4,011). The checksum word changes from `fded` to `6B57`; the header ROM end
+(4,011). The checksum word changes from `FDEC` to `6B56`; the header ROM end
 remains `$001FFFFF`. All other loader bytes remain curated-reference-identical.
 
 ### Forge Z80 identity and complete relocation audit
@@ -503,24 +694,24 @@ loaded driver hashes, exact backend transactions, handoff digest plus callback,
 and router/routine digests. It requires zero padding after Forge.
 
 The full 2 MiB stock reference with those same spans zeroed hashes to
-`1eccd7628d0481f119dcc8c3cabd5772a6d0f4625d6bd6dc0b2b828ee553dee4`.
+`66d560a1698458738f98226f8e1460ba80724b0241cb7fab54777ec2e57ca71e`.
 The compiled audit also restores actual stock bytes and reproduces the complete
 unmasked curated SHA-256
-`51263146131fa2dd70b2fa4c4b5701c6eb7d72d6683bf032358163716bf4ac81`.
+`7e8fe718aea8344dfe32931097977c0661bc0dbc9c41cba60e7b7a5e12be933f`.
 No broad trailing region or gameplay range is ignored. Mutation tests repair
 the header checksum and still require rejection outside and inside these spans.
 
 Bugfixed MD+ identity:
 
 - Size: `2,097,152` bytes.
-- Stored and calculated checksum: `6B57`.
-- MD5: `cbcae2d2153ff7814347bd0013aefde5`.
-- SHA-256: `f80d983bdc44d5d89f3f7556e644a5b0ff5bf6e519ddacf0a3df73d4406449dc`.
+- Stored and calculated checksum: `6B56`.
+- MD5: `517f2be577e365296e900cfc04a77782`.
+- SHA-256: `d16689760d3c913ff795c7f3b1c3c98b8ad789fb95efdbd50efaa4cd7f95f621`.
 
 The first controlled build and a rebuild from deleted prepared/ROM output
 reproduce this identity. Production remains at checksum `BE41` and SHA-256
 `bd12138cd478596e4d294a06f573a98a6d37747dfe58d726ca62cf50dc3a8c44`.
-Stock Bugfixed remains at checksum `FDED` and its frozen identity above.
+Stock Bugfixed remains at checksum `FDEC` and its frozen identity above.
 
 Both variants retain exactly 21 adjacent open/write/close transactions: 42
 `$0003F7FA` signatures, 21 `$0003F7FE` signatures, 21 opens and 21 closes.
@@ -543,7 +734,7 @@ The **pre-correction** Bugfixed MD+ ROM was tested on Mega Drive core
 `26.06.03`: 2,097,152 bytes, checksum `6886`, MD5
 `2a3f1072c77082b5f3aa80634e4cdd90`, SHA-256
 `8101cf55fcd20ee573be524b1e5e05f5aaecc31560832ffdc136543a5d8e26d6`.
-This is historical evidence, not the final qualified identity. The old stock
+This is historical evidence, not the current qualified identity. The old stock
 Bugfixed reference was checksum `FB1C`, MD5 `3481d68b32dce3b0a01d291eea49c460`,
 SHA-256 `80be4afa7b11141dfdf7a36ac3ba4af24c71985dda77b8a6a46f9ae1745b4404`.
 Both old Bugfixed identities are superseded by the ARZ policy correction.
@@ -570,7 +761,7 @@ so the earlier broad hardware results remain relevant integration evidence.
 They are not a claim that the revised hash repeated the full-game playthrough
 or the complete four-zone 2P soak.
 
-The exact revised Bugfixed MD+ ROM was then revalidated on **MiSTer FPGA,
+The exact Obj2B-corrected Bugfixed MD+ ROM was then revalidated on **MiSTer FPGA,
 Mega Drive core `26.06.03`**:
 
 - Size: `2,097,152` bytes.
@@ -590,10 +781,61 @@ Targeted revised-ROM hardware results:
 - **EHZ 2P sample:** normal play, MD+ playback and looping, and the
   player-position swap item box all passed, with no glitches observed.
 
-**This exact revised hash is now hardware-qualified on MiSTer Mega Drive core
+**This exact preceding Obj2B hash was hardware-qualified on MiSTer Mega Drive core
 `26.06.03`.** The qualification rests on the earlier broad 1P/2P integration
 testing, discovery of the isolated ARZ collision regression, the narrow Obj2B
 correction, software proof that unrelated integration machinery stayed
 unchanged, and successful targeted hardware revalidation of the revised hash.
-The pre-correction `8101cf55...` ROM is historical evidence and is not the
-final qualified identity.
+The pre-correction `8101cf55...` ROM remains historical evidence. Neither that
+hash nor the preceding `f80d983b...` qualification is substituted for the
+current exact identity's targeted results below.
+
+#### Current Obj82 hardware qualification
+
+Lloyd reported successful targeted ARZ testing of this exact Bugfixed MD+ ROM
+on **MiSTer FPGA, Mega Drive core `26.06.03`**:
+
+- Size: `2,097,152` bytes.
+- Stored and calculated checksum: `6B56`.
+- MD5: `517f2be577e365296e900cfc04a77782`.
+- SHA-256: `d16689760d3c913ff795c7f3b1c3c98b8ad789fb95efdbd50efaa4cd7f95f621`.
+
+The reported hardware results were:
+
+- **Obj82 Act 1, subtype `$10`:** normal jump/contact behaviour, standing,
+  walking across the pillar, side collision and correct visibility/culling.
+- **Obj82 Act 2, subtype `$11`:** normal jump/contact behaviour, standing,
+  walking, side collision, the wait/fall sequence, falling, standing on top
+  while falling and correct visibility/culling.
+- **Obj2B Act 1 regression check:** standing on top while the pillar rises.
+  Lloyd confirmed that the reported rising-pillar observation belongs to this
+  Obj2B check; Obj82 subtype `$10` initializes as stationary movement type 0.
+- **Audio/lifecycle:** ARZ MD+ playback and looping; pause/unpause;
+  MD+ -> invincibility -> MD+ transition/recovery; Act 2 transition to boss
+  music; and boss music -> ARZ MD+ restoration.
+
+**No hardware regression was observed. This exact `d1668976...` hash is now
+hardware-qualified on MiSTer Mega Drive core `26.06.03`.** The source and
+compiled tests establish retained display/culling radius `$32`, jumping
+collision `d2=$30` and walking collision `d3=$31`; upstream previously passed
+`d2=$32,d3=$31`. The hardware results validate the corrected gameplay and
+integration behaviour. The local, size-neutral change leaves Forge placement,
+Z80 bytes, audio implementation, Production and the Obj2B correction unchanged.
+
+The qualification evidence chain is:
+
+1. Broad full-game 1P and comprehensive 2P Forge integration testing of
+   `8101cf55...` on core `26.06.03`.
+2. The hardware-observed Obj2B regression was identified and corrected.
+3. The exact `f80d983b...` hash passed targeted Obj2B-era hardware qualification.
+4. Obj82's partial collision compensation was identified through source and
+   compiled analysis.
+5. The size-neutral Obj82 correction restored both retail collision inputs;
+   software audits established unchanged unrelated integration behaviour.
+6. The exact `d1668976...` hash passed the targeted ARZ tests reported above.
+7. The current exact hash is hardware-qualified on that evidence chain.
+
+The current hash did not undergo another full 1P playthrough or comprehensive
+2P soak. Those broader results remain evidence from the earlier exact ROM;
+the current-ROM hardware evidence is the targeted ARZ and audio/lifecycle scope
+reported here.
