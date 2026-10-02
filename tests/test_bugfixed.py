@@ -20,7 +20,7 @@ class CuratedPolicyTests(unittest.TestCase):
     def main_fixture(self):
         return ('\nfixBugs = 0\n\nFixMusicAndSFXDataBugs = fixBugs\n' +
                 '\n'.join(pattern * count for pattern, count in bugfixed.PAGE_FLIP_PATTERNS['s2.asm']) +
-                bugfixed.MCZ_RIGHT_DRILL_OLD + bugfixed.ARZ_PILLAR_OLD)
+                bugfixed.MCZ_RIGHT_DRILL_OLD + bugfixed.ARZ_PILLAR_OLD + bugfixed.ARZ_OBJ82_OLD)
 
     def test_rejects_wrong_source_hash_and_unknown_file(self):
         for name in (*bugfixed.SOURCE_HASHES, 'build.lua'):
@@ -43,7 +43,7 @@ class CuratedPolicyTests(unittest.TestCase):
         self.assertIn('\nFixMusicAndSFXDataBugs = 0\n', result)
         self.assertEqual(result.count('if ForgeFix2PSpritePageFlip'), 7)
         self.assertEqual(result.count('if ~~ForgeFix2PSpritePageFlip'), 2)
-        self.assertEqual(result.count('if fixBugs'), 2)  # Both downstream corrections.
+        self.assertEqual(result.count('if fixBugs'), 3)  # Three downstream corrections.
         self.assertNotIn('if ~~fixBugs', result)
 
     def test_ordinary_game_fixes_are_not_rewritten(self):
@@ -87,6 +87,21 @@ class CuratedPolicyTests(unittest.TestCase):
         for pattern, _ in bugfixed.PAGE_FLIP_PATTERNS['s2.constants.asm']:
             with self.assertRaisesRegex(BuildError, 'source pattern'):
                 self.transform_fixture('s2.constants.asm', text.replace(pattern, '', 1))
+
+    def test_obj82_requires_one_pristine_anchor_and_preserves_obj2b(self):
+        source = self.main_fixture()
+        result = self.transform_fixture('s2.asm', source)
+        self.assertIn(bugfixed.ARZ_OBJ82_FIXED, result)
+        self.assertNotIn(bugfixed.ARZ_OBJ82_OLD, result)
+        self.assertEqual(result.count(bugfixed.ARZ_PILLAR_FIXED), 1)
+        for wrong in (source.replace(bugfixed.ARZ_OBJ82_OLD, ''),
+                      source + bugfixed.ARZ_OBJ82_OLD,
+                      source.replace(bugfixed.ARZ_OBJ82_OLD, bugfixed.ARZ_OBJ82_FIXED),
+                      source.replace('subq.w\t#2,d3', 'subq.w\t#3,d3')):
+            with self.assertRaisesRegex(BuildError, 'source pattern'):
+                self.transform_fixture('s2.asm', wrong)
+            with self.assertRaisesRegex(BuildError, 'source hash changed'):
+                bugfixed.transform_source(wrong.encode(), 's2.asm')
 
     def test_wrong_revision_and_dirty_clone_rejected_before_mutation(self):
         with patch.object(bugfixed, '_git_output', return_value='wrong'), self.assertRaisesRegex(

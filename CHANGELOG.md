@@ -16,7 +16,7 @@ Versioning for its own tooling releases.
   SHA-256 `f80d983bdc44d5d89f3f7556e644a5b0ff5bf6e519ddacf0a3df73d4406449dc`.
 - Verify the full curated 2 MiB baseline outside exact Forge mutations, run all
   three compiled CPU suites against both layouts, and check deterministic
-  rebuilding and package coexistence. The revised Bugfixed ROM is software-verified
+  rebuilding and package coexistence. The preceding Obj2B-corrected Bugfixed ROM was software-verified
   and hardware-qualified on MiSTer Mega Drive core `26.06.03`. Production remains
   the default hardware-qualified build with its exact Stage 5 identity, names
   and compatibility symlink.
@@ -30,6 +30,30 @@ Versioning for its own tooling releases.
 
 ### Fixed
 
+- Preserve retail Obj82 pillar jumping and walking collision (`$30/$31`) while
+  retaining upstream's `$32` display radius and explicit-height culling fix.
+  Upstream already compensates walking collision; reorder that compensation to
+  act on `d2` before deriving `d3`. Guard the source anchor and run compiled
+  retail/stock/MD+ pillar and non-pillar regressions. The 18-byte sequence stays
+  size-neutral; only its local branch label moves, with no downstream movement.
+  Obj82 was identified through source/compiled analysis, then validated after
+  correction on hardware; Obj2B was originally identified from observed gameplay.
+- Rebaseline stock Bugfixed to checksum `FDEC`, SHA-256
+  `7e8fe718aea8344dfe32931097977c0661bc0dbc9c41cba60e7b7a5e12be933f`,
+  and Bugfixed MD+ to `6B56`, SHA-256
+  `d16689760d3c913ff795c7f3b1c3c98b8ad789fb95efdbd50efaa4cd7f95f621`.
+  Update the curated source and masked-reference digests; preserve Obj2B,
+  Production, Forge placement/protocols, Z80, audio and historical hardware
+  qualification evidence for the preceding exact identities.
+- Hardware-qualify the exact current `6B56` / `d1668976...` Bugfixed MD+ ROM on
+  MiSTer Mega Drive core `26.06.03` after targeted ARZ Act 1 `$10` and Act 2 `$11`
+  contact, standing, walking, side collision and culling checks, Act 2 waiting/
+  falling checks, and ARZ playback/looping, pause, invincibility and boss-music
+  transition/restoration checks. An Act 1 Obj2B standing-while-rising regression
+  check also passed. No hardware regression was observed. Retain
+  the preceding `f80d983b...` Obj2B qualification and earlier broad 1P/2P results
+  as historical evidence; no new full-game playthrough or comprehensive soak
+  is claimed for the current hash.
 - Correct the unintended vertical-collision side effect of upstream's ARZ
   Rising Pillar culling fix, exposed by MiSTer playtesting. Retain explicit
   height and the larger display dimensions; subtract eight only for collision.
@@ -44,7 +68,7 @@ Versioning for its own tooling releases.
   full 1P and comprehensive 2P evidence on Mega Drive core `26.06.03` as
   historical results. Targeted revalidation of the revised exact hash passed
   in both ARZ acts, with audio/lifecycle checks and an EHZ 2P regression sample;
-  the revised Bugfixed MD+ ROM is now hardware-qualified on the same core.
+  the preceding Obj2B-corrected Bugfixed MD+ ROM was hardware-qualified on that core.
 
 ### Removed
 

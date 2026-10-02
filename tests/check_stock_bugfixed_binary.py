@@ -31,8 +31,8 @@ from tools.mdplus_builder.source import _clone_at, _git_output, genesis_checksum
 from tools.mdplus_builder.variants import BuildVariant
 
 # Independent observations from the first controlled build, not verifier constants.
-EXPECTED_IDENTITY = (2_097_152, 'FDED', '46c95382536445188cdb0d63e4d7e305',
-                     '51263146131fa2dd70b2fa4c4b5701c6eb7d72d6683bf032358163716bf4ac81')
+EXPECTED_IDENTITY = (2_097_152, 'FDEC', '9a0fd894e5fd5e85a354d2578fab7421',
+                     '7e8fe718aea8344dfe32931097977c0661bc0dbc9c41cba60e7b7a5e12be933f')
 LAYOUT = {
     'PlayMusic': (0x135E, 0x135E), 'PlaySound': (0x1370, 0x1370),
     'PlaySound2': (0x1376, 0x1376), 'sndDriverInput': (0x1084, 0x1084),
@@ -57,6 +57,10 @@ LAYOUT = {
     'loc_25ACE': (0x25ACE, 0x25E84),
     'loc_25B8E': (0x25B8E, 0x25F44), 'Obj2B_MapUnc_25C6E': (0x25C6E, 0x26024),
     'Map_obj2B_03F6_End': (0x260D6, 0x2648C), 'Obj2C': (0x26104, 0x264B8),
+    'Obj82': (0x2A290, 0x2A658), 'Obj82_Init': (0x2A2AA, 0x2A672),
+    'Obj82_Main': (0x2A312, 0x2A6DA), 'Obj82_Properties': (0x2A2A2, 0x2A66A),
+    'Obj82_Types': (0x2A358, 0x2A728), 'Obj82_MapUnc_2A476': (0x2A476, 0x2A846),
+    'Obj83': (0x2A4FC, 0x2A8CC),
 }
 PAGE_SYMBOLS = ('Sprite_Table_Alternate', 'Sprite_Table_P2_Alternate',
                 'Current_sprite_table_page', 'Sprite_table_page_flip_pending')
@@ -352,6 +356,87 @@ class ARZPillarCompiledTests(unittest.TestCase):
             with self.subTest(image=name):
                 actual = self.collision(name, 0x2C if name == 'retail' else 0x34, rising=True)
                 self.assertEqual(actual, (0x1B, 0x30, 0x31))
+
+
+class ARZObj82CompiledTests(unittest.TestCase):
+    """Execute valid Obj82 initialization and movement to actual SolidObject."""
+
+    @classmethod
+    def setUpClass(cls):
+        images = {
+            'retail': (modern.STOCK_MODERN_ROM_PATH, modern.STOCK_MODERN_LISTING_PATH),
+            'curated': (bugfixed.STOCK_BUGFIXED_ROM_PATH, bugfixed.STOCK_BUGFIXED_LISTING_PATH),
+            'mdplus': (BuildVariant.BUGFIXED.rom_path, BuildVariant.BUGFIXED.prepared_dir / 's2.lst'),
+        }
+        cls.images = {name: (rom.read_bytes(), modern.modern_symbols(listing))
+                      for name, (rom, listing) in images.items()}
+
+    def machine(self, name, subtype):
+        rom, symbols = self.images[name]
+        cpu = Uc(UC_ARCH_M68K, UC_MODE_BIG_ENDIAN)
+        cpu.ctl_set_cpu_model(UC_CPU_M68K_M68000)
+        cpu.mem_map(0, 0x200000)
+        cpu.mem_write(0, rom)
+        cpu.mem_map(0xFFFF0000, 0x10000)
+        obj, stack = 0xFFFFB000, 0xFFFFEF00
+        cpu.reg_write(UC_M68K_REG_SR, 0x2700)
+        cpu.reg_write(UC_M68K_REG_A0, obj)
+        cpu.reg_write(UC_M68K_REG_A7, stack)
+        cpu.mem_write(obj + symbols['subtype'], bytes((subtype,)))
+        cpu.mem_write(obj + symbols['x_pos'], (0x340).to_bytes(2, 'big'))
+        cpu.mem_write(obj + symbols['y_pos'], (0x520).to_bytes(2, 'big'))
+        cpu.emu_start(symbols['Obj82_Init'], symbols['Obj82_Main'], count=128)
+        self.assertEqual(cpu.reg_read(UC_M68K_REG_PC), symbols['Obj82_Main'])
+        self.assertEqual(cpu.reg_read(UC_M68K_REG_A7), stack)
+        self.assertEqual(cpu.mem_read(obj + symbols['mapping_frame'], 1)[0], subtype >> 4)
+        self.assertEqual(cpu.mem_read(obj + symbols['subtype'], 1)[0], subtype & 0xF)
+        flags = cpu.mem_read(obj + symbols['render_flags'], 1)[0]
+        self.assertEqual(bool(flags & (1 << symbols['render_flags.explicit_height'])), name != 'retail')
+        return cpu, symbols, obj, stack
+
+    def collision(self, name, subtype, width, radius):
+        cpu, symbols, obj, stack = self.machine(name, subtype)
+        self.assertEqual(cpu.mem_read(obj + symbols['width_pixels'], 1)[0], width)
+        self.assertEqual(cpu.mem_read(obj + symbols['y_radius'], 1)[0], radius)
+        # The real routine calls SolidObject only for an on-screen object.
+        flags = cpu.mem_read(obj + symbols['render_flags'], 1)[0]
+        cpu.mem_write(obj + symbols['render_flags'], bytes((flags | (1 << symbols['render_flags.on_screen']),)))
+        for register in (UC_M68K_REG_D1, UC_M68K_REG_D2, UC_M68K_REG_D3):
+            cpu.reg_write(register, 0xA5A5FFFF)
+        cpu.emu_start(symbols['Obj82_Main'], symbols['SolidObject'], count=128)
+        self.assertEqual(cpu.reg_read(UC_M68K_REG_PC), symbols['SolidObject'])
+        self.assertEqual(cpu.reg_read(UC_M68K_REG_A7), stack - 4)
+        self.assertEqual(cpu.mem_read(obj + symbols['y_radius'], 1)[0], radius)
+        self.assertEqual(cpu.mem_read(obj + symbols['width_pixels'], 1)[0], width)
+        self.assertEqual(cpu.mem_read(obj + symbols['render_flags'], 1)[0], flags | 0x80)
+        return (cpu.reg_read(UC_M68K_REG_D1), cpu.reg_read(UC_M68K_REG_D2),
+                cpu.reg_read(UC_M68K_REG_D3) & 0xFFFF)
+
+    def test_pillar_visual_state_and_both_collision_heights_match_retail(self):
+        # Both subtypes actually occur in ARZ: stationary and waiting to fall.
+        for name in self.images:
+            for subtype in (0x10, 0x11):
+                with self.subTest(image=name, subtype=hex(subtype)):
+                    radius = 0x30 if name == 'retail' else 0x32
+                    self.assertEqual(self.collision(name, subtype, 0x1C, radius), (0x27, 0x30, 0x31))
+
+    def test_valid_non_pillar_frame_zero_does_not_subtract(self):
+        for name in self.images:
+            for subtype in (0x00, 0x01):
+                with self.subTest(image=name, subtype=hex(subtype)):
+                    self.assertEqual(self.collision(name, subtype, 0x20, 8), (0x2B, 8, 9))
+
+    def test_compiled_reordering_is_exact_and_size_neutral(self):
+        old = bytes.fromhex('740014280016360252434a28001a67025543')
+        fixed = bytes.fromhex('7400142800164a28001a6702554236025243')
+        self.assertEqual(len(old), len(fixed))
+        for name in ('curated', 'mdplus'):
+            with self.subTest(image=name):
+                rom, symbols = self.images[name]
+                self.assertEqual(rom[0x2A700:0x2A712], fixed)
+                self.assertEqual(symbols['last_btst_converted.notPillar'], 0x2A70E)
+                self.assertEqual(symbols['Obj82_Types'], 0x2A728)
+                self.assertEqual(rom[0x2A712:0x2A716], bytes.fromhex('610001a6'))
 
 
 class MCZDrillCompiledTests(unittest.TestCase):
