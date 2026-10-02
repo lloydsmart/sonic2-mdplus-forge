@@ -5,8 +5,8 @@
 MusID_ForgeStop = $F7
 ForgeAckValue = $A5
 
-    if (fixBugs<>0)||(ForgeModernHandoff<>ramaddr($FFFFF113))
-        fatal "Forge handoff requires the unused fixBugs=0 RAM byte"
+    if (fixBugs<>ForgeExpectedFixBugs)||(ForgeModernHandoff<>ramaddr($FFFFF113))
+        fatal "Forge handoff requires the audited unused RAM byte"
     endif
     if (Underwater_palette+$80<>ramaddr($FFFFF100))||(Game_Mode<>ramaddr($FFFFF600))
         fatal "Forge handoff RAM reservation changed"

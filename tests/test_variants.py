@@ -90,7 +90,7 @@ class VariantSelectionTests(unittest.TestCase):
             'bd12138cd478596e4d294a06f573a98a6d37747dfe58d726ca62cf50dc3a8c44',
         )
         self.assertEqual(modern.VERIFICATION_PROFILES[production], expected)
-        self.assertEqual(modern.VERIFICATION_PROFILES[bugfixed], expected)
+        self.assertNotEqual(modern.VERIFICATION_PROFILES[bugfixed], expected)
         self.assertIsNot(modern.VERIFICATION_PROFILES[production], modern.VERIFICATION_PROFILES[bugfixed])
 
 
@@ -142,7 +142,8 @@ class VariantIsolationTests(unittest.TestCase):
                     (destination / name).write_bytes(b'synthetic source')
 
             stack.enter_context(patch.object(modern, '_clone_at', side_effect=clone))
-            stack.enter_context(patch.object(modern, '_prepare_modern_source', side_effect=lambda data, name: data))
+            stack.enter_context(patch.object(modern, '_prepare_modern_source', side_effect=lambda data, name, **kwargs: data))
+            stack.enter_context(patch.object(modern.bugfixed, 'apply_policy'))
             stack.enter_context(patch.object(modern, 'require_program', return_value='lua'))
 
             def run(args, *, cwd=None):
@@ -153,8 +154,12 @@ class VariantIsolationTests(unittest.TestCase):
             verify = stack.enter_context(patch.object(modern, 'verify_modern', return_value={}))
             stack.enter_context(patch.object(modern, 'verify_modern_driver'))
             stack.enter_context(patch.object(modern, 'assembled_modern_driver', return_value=b''))
-            stack.enter_context(patch.object(modern, 'modern_symbols', return_value=modern.HANDOFF_ADDRESSES |
-                                      modern.ROUTER_ADDRESSES | {n: a for n, (a, _) in modern.RAM_STATE.items()}))
+            def symbols(path):
+                variant = next(v for v in BuildVariant if path.parent == v.prepared_dir)
+                layout = modern.LAYOUT_PROFILES[variant]
+                return layout.handoff | layout.router | {n: a for n, (a, _) in modern.RAM_STATE.items()}
+
+            stack.enter_context(patch.object(modern, 'modern_symbols', side_effect=symbols))
 
             def snapshot(path):
                 return {p.relative_to(path): (p.read_bytes(), p.stat().st_mtime_ns)
@@ -179,7 +184,7 @@ class VariantIsolationTests(unittest.TestCase):
             self.assertEqual((checkout / 'input-marker').read_text(), 'immutable input')
             self.assertEqual(len(list(checkout.iterdir())), 1)
             contents = [{p: data for p, (data, _) in snapshot(v.prepared_dir).items()} for v in BuildVariant]
-            self.assertEqual(*contents)
+            self.assertNotEqual(*contents)
 
     def test_packages_coexist_with_unchanged_audio_and_selected_verifier(self):
         with tempfile.TemporaryDirectory() as directory, ExitStack() as stack:

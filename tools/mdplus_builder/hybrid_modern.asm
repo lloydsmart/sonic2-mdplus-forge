@@ -1,12 +1,12 @@
 ; Stage 5: fixed native helper and byte-identical Stage 3 backend.
 ; Included AFTER the last sound bank, BEFORE upstream padding and EndOfRom.
-    if (gameRevision<>1)||(fixBugs<>0)||(padToPowerOfTwo<>1)
-        fatal "Forge modern MD+ requires REV01, fixBugs=0 and power-of-two padding"
+    if (gameRevision<>1)||(fixBugs<>ForgeExpectedFixBugs)||(padToPowerOfTwo<>1)
+        fatal "Forge modern MD+ requires REV01, the selected source policy and power-of-two padding"
     endif
-    if *<>$FFFEC
+    if *<>ForgeSoundDataEnd
         fatal "Unexpected upstream end of sound data"
     endif
-    org $100000 ; dedicated appended region; leave stock padding intact
+    org ForgeImplementationBase ; dedicated appended region; leave stock padding intact
 
 ForgeModernNativeMusic:
     tst.b   (Sound_Queue.Music0).w
@@ -19,7 +19,7 @@ ForgeModernNativeSecond:
 ForgeModernNativeEnd:
     ; MOVE.B determines N/Z, clears V/C and preserves X. JMP/RTS do not
     ; change CCR. All data/address registers are preserved; no extra stack.
-    if (ForgeModernNativeMusic<>$100000)||(ForgeModernNativeSecond<>$10000C)||(ForgeModernNativeEnd<>$100012)
+    if (ForgeModernNativeMusic<>(ForgeImplementationBase+$000))||(ForgeModernNativeSecond<>(ForgeImplementationBase+$00C))||(ForgeModernNativeEnd<>(ForgeImplementationBase+$012))
         fatal "Unexpected Stage 2 implementation layout"
     endif
 
@@ -36,7 +36,7 @@ ForgeModernDispatch:
 ; Z=1. The three stores must be adjacent, with no persistent overlay opening.
 ; @COMMANDS@
 ForgeModernEnd:
-    if (ForgeModernDispatch<>$100012)||(ForgeModernEnd<>$1002B6)
+    if (ForgeModernDispatch<>(ForgeImplementationBase+$012))||(ForgeModernEnd<>(ForgeImplementationBase+$2B6))
         fatal "Unexpected Stage 3 backend layout"
     endif
     if ForgeModernEnd>$200000

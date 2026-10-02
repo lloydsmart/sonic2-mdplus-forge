@@ -6,8 +6,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
-from .common import BUILD, DEPENDENCIES, BuildError, load_json, require_program, run
-from .modern import SOURCE_MODERN_DIR
+from .common import BUILD, DEPENDENCIES, SOURCE_MODERN_DIR, BuildError, load_json, require_program, run
 from .source import _clone_at, _git_output, genesis_checksum
 
 AUDITED_COMMIT = "380f37a731bfc720bb0371a35a593184a7ec5e43"
@@ -32,10 +31,28 @@ MCZ_RIGHT_DRILL_OLD = ("\taddi_.w\t#1,sub2_x_pos(a0)\n"
                        ".notfacingright2:")
 MCZ_RIGHT_DRILL_FIXED = MCZ_RIGHT_DRILL_OLD.replace("subi_.w\t#2,sub5_x_pos(a0)",
                                                     "subi_.w\t#2,sub2_x_pos(a0)")
+# Correct an unintended collision side effect of upstream's Obj2B culling fix.
+# Keep the larger display radius and subtract eight only for SolidObject.
+ARZ_PILLAR_OLD = ("\taddi.w\t#$B,d1\n"
+                  "    endif\n"
+                  "\tmoveq\t#0,d2\n"
+                  "\tmove.b\ty_radius(a0),d2\n"
+                  "\tmove.w\td2,d3\n"
+                  "\taddq.w\t#1,d3\n"
+                  "\tmove.w\t(sp)+,d4\n"
+                  "\tjsrto\tJmpTo8_SolidObject")
+ARZ_PILLAR_FIXED = ARZ_PILLAR_OLD.replace(
+    "\tmove.b\ty_radius(a0),d2\n",
+    "\tmove.b\ty_radius(a0),d2\n"
+    "    if fixBugs\n"
+    "\t; Forge: retain the culling fix, with retail-equivalent collision height.\n"
+    "\tsubq.w\t#8,d2\n"
+    "    endif\n",
+)
 STOCK_BUGFIXED_SIZE = 2_097_152
-STOCK_BUGFIXED_CHECKSUM = "FB1C"
-STOCK_BUGFIXED_MD5 = "3481d68b32dce3b0a01d291eea49c460"
-STOCK_BUGFIXED_SHA256 = "80be4afa7b11141dfdf7a36ac3ba4af24c71985dda77b8a6a46f9ae1745b4404"
+STOCK_BUGFIXED_CHECKSUM = "FDED"
+STOCK_BUGFIXED_MD5 = "46c95382536445188cdb0d63e4d7e305"
+STOCK_BUGFIXED_SHA256 = "51263146131fa2dd70b2fa4c4b5701c6eb7d72d6683bf032358163716bf4ac81"
 
 # Exact context anchors, not a rewrite of arbitrary fixBugs expressions.
 # The two normal VInt upload paths deliberately share one anchor (count 2).
@@ -74,6 +91,7 @@ def transform_source(data: bytes, filename: str) -> bytes:
         text = _replace_exact(text, "\nFixMusicAndSFXDataBugs = fixBugs\n",
                               "\nFixMusicAndSFXDataBugs = 0\n")
         text = _replace_exact(text, MCZ_RIGHT_DRILL_OLD, MCZ_RIGHT_DRILL_FIXED)
+        text = _replace_exact(text, ARZ_PILLAR_OLD, ARZ_PILLAR_FIXED)
     elif filename == "s2.sounddriver.asm":
         text = _replace_exact(text, "\nFixDriverBugs = fixBugs\n", "\nFixDriverBugs = 0\n")
     for pattern, count in PAGE_FLIP_PATTERNS.get(filename, ()):

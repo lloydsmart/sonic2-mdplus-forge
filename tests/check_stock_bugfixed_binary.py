@@ -17,6 +17,9 @@ from unicorn.m68k_const import (
     UC_CPU_M68K_M68000,
     UC_M68K_REG_A0,
     UC_M68K_REG_A7,
+    UC_M68K_REG_D1,
+    UC_M68K_REG_D2,
+    UC_M68K_REG_D3,
     UC_M68K_REG_PC,
     UC_M68K_REG_SR,
 )
@@ -28,8 +31,8 @@ from tools.mdplus_builder.source import _clone_at, _git_output, genesis_checksum
 from tools.mdplus_builder.variants import BuildVariant
 
 # Independent observations from the first controlled build, not verifier constants.
-EXPECTED_IDENTITY = (2_097_152, 'FB1C', '3481d68b32dce3b0a01d291eea49c460',
-                     '80be4afa7b11141dfdf7a36ac3ba4af24c71985dda77b8a6a46f9ae1745b4404')
+EXPECTED_IDENTITY = (2_097_152, 'FDED', '46c95382536445188cdb0d63e4d7e305',
+                     '51263146131fa2dd70b2fa4c4b5701c6eb7d72d6683bf032358163716bf4ac81')
 LAYOUT = {
     'PlayMusic': (0x135E, 0x135E), 'PlaySound': (0x1370, 0x1370),
     'PlaySound2': (0x1376, 0x1376), 'sndDriverInput': (0x1084, 0x1084),
@@ -50,6 +53,10 @@ LAYOUT = {
     'Vint0_noWater': (0x566, 0x566), 'H_Int': (0xF54, 0xF54),
     'BuildSprites_2P': (0x1694E, 0x16BA2), 'BuildSprites_P2': (0x16A7A, 0x16CCE),
     'BuildSprites_P2_NextLevel': (0x16B78, 0x16DCC),
+    'Obj2B_Init': (0x25A6E, 0x25E2A), 'Obj2B_Main': (0x25A9C, 0x25E58),
+    'loc_25ACE': (0x25ACE, 0x25E84),
+    'loc_25B8E': (0x25B8E, 0x25F44), 'Obj2B_MapUnc_25C6E': (0x25C6E, 0x26024),
+    'Map_obj2B_03F6_End': (0x260D6, 0x2648C), 'Obj2C': (0x26104, 0x264B8),
 }
 PAGE_SYMBOLS = ('Sprite_Table_Alternate', 'Sprite_Table_P2_Alternate',
                 'Current_sprite_table_page', 'Sprite_table_page_flip_pending')
@@ -119,7 +126,7 @@ class StockBugfixedBinaryTests(unittest.TestCase):
         bugfixed.build_stock_bugfixed()
         self.assertEqual(bugfixed.STOCK_BUGFIXED_ROM_PATH.read_bytes(), self.fixed)
         self.assertEqual(snapshot(protected), before)
-        self.assertEqual(BuildVariant.PRODUCTION.rom_path.read_bytes(), BuildVariant.BUGFIXED.rom_path.read_bytes())
+        self.assertNotEqual(BuildVariant.PRODUCTION.rom_path.read_bytes(), BuildVariant.BUGFIXED.rom_path.read_bytes())
 
     def test_pinned_source_policy_changes_only_three_files(self):
         with tempfile.TemporaryDirectory(prefix='audit-curated-', dir=BUILD) as directory:
@@ -252,6 +259,99 @@ class StockBugfixedBinaryTests(unittest.TestCase):
                      'bugfixed': f'{word[1]:06X}', 'delta': word[1] - word[0]})
         (BUILD / 'stock-bugfixed-layout.json').write_text(json.dumps(rows, indent=2) + '\n')
         print(json.dumps(rows, indent=2))
+
+    def test_pillar_insertion_and_alignment_are_local(self):
+        listing = bugfixed.STOCK_BUGFIXED_LISTING_PATH.read_text()
+        self.assertRegex(listing, r'25E68 : 5142\s+subq\.w\s+#8,d2')
+        self.assertRegex(listing, r'264B6 : .*align 4')
+        self.assertRegex(listing, r'264B8 : .*!org')
+        self.assertRegex(listing, r'EC36A : .*align \$1000')
+        # All seven Obj2B jump stubs moved by two; the following Obj2C did not.
+        for index, target in enumerate(('DisplaySprite', 'DeleteObject', 'MarkObjGone',
+                                        'AllocateObjectAfterCurrent', 'Adjust2PArtPointer',
+                                        'SolidObject', 'ObjectMove')):
+            address = 0x2648C + index * 6
+            expected = bytes.fromhex('4ef9') + self.fixed_symbols[target].to_bytes(4, 'big')
+            self.assertEqual(self.fixed[address:address + 6], expected)
+        self.assertEqual(self.fixed[0x264B6:0x264B8], bytes(2))
+        # Unmoved tables must still point to the two moved pillar targets.
+        self.assertEqual(int.from_bytes(self.fixed[0x25E28:0x25E2A], 'big'),
+                         self.fixed_symbols['loc_25B8E'] - self.fixed_symbols['Obj2B_Index'])
+        self.assertEqual(int.from_bytes(self.fixed[0x429E0:0x429E4], 'big'),
+                         0x2B000000 | self.fixed_symbols['Obj2B_MapUnc_25C6E'])
+
+
+class ARZPillarCompiledTests(unittest.TestCase):
+    """Execute Obj2B init and movement through the actual SolidObject entry."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.images = {
+            'retail': (modern.STOCK_MODERN_ROM_PATH, modern.STOCK_MODERN_LISTING_PATH),
+            'curated': (bugfixed.STOCK_BUGFIXED_ROM_PATH, bugfixed.STOCK_BUGFIXED_LISTING_PATH),
+            'mdplus': (BuildVariant.BUGFIXED.rom_path, BuildVariant.BUGFIXED.prepared_dir / 's2.lst'),
+        }
+        cls.images = {name: (rom.read_bytes(), modern.modern_symbols(listing))
+                      for name, (rom, listing) in cls.images.items()}
+
+    def machine(self, name):
+        rom, symbols = self.images[name]
+        cpu = Uc(UC_ARCH_M68K, UC_MODE_BIG_ENDIAN)
+        cpu.ctl_set_cpu_model(UC_CPU_M68K_M68000)
+        cpu.mem_map(0, 0x200000)
+        cpu.mem_write(0, rom)
+        cpu.mem_map(0xFFFF0000, 0x10000)
+        obj, stack = 0xFFFFB000, 0xFFFFEF00
+        cpu.reg_write(UC_M68K_REG_SR, 0x2700)
+        cpu.reg_write(UC_M68K_REG_A0, obj)
+        cpu.reg_write(UC_M68K_REG_A7, stack)
+        cpu.mem_write(obj + symbols['x_pos'], (0x100).to_bytes(2, 'big'))
+        cpu.emu_start(symbols['Obj2B_Init'], symbols['Obj2B_Main'], count=128)
+        self.assertEqual(cpu.reg_read(UC_M68K_REG_PC), symbols['Obj2B_Main'])
+        self.assertEqual(cpu.reg_read(UC_M68K_REG_A7), stack)
+        return cpu, symbols, obj, stack
+
+    def test_culling_initialization_remains_fixed_in_stock_and_mdplus(self):
+        for name in self.images:
+            with self.subTest(image=name):
+                cpu, symbols, obj, _ = self.machine(name)
+                flags = cpu.mem_read(obj + symbols['render_flags'], 1)[0]
+                explicit = 1 << symbols['render_flags.explicit_height']
+                self.assertEqual(bool(flags & explicit), name != 'retail')
+                self.assertEqual(cpu.mem_read(obj + symbols['width_pixels'], 1)[0],
+                                 0x10 if name == 'retail' else 0x1C)
+                self.assertEqual(cpu.mem_read(obj + symbols['y_radius'], 1)[0],
+                                 0x18 if name == 'retail' else 0x20)
+
+    def collision(self, name, radius, rising=False):
+        cpu, symbols, obj, stack = self.machine(name)
+        cpu.mem_write(obj + symbols['y_radius'], bytes((radius,)))
+        # Secondary state 4 has finished rising; 2 with timer zero advances a stage.
+        cpu.mem_write(obj + symbols['routine_secondary'], bytes((2 if rising else 4,)))
+        cpu.mem_write(obj + symbols['objoff_34'], bytes(2))
+        for register in (UC_M68K_REG_D1, UC_M68K_REG_D2, UC_M68K_REG_D3):
+            cpu.reg_write(register, 0xA5A5FFFF)
+        cpu.emu_start(symbols['Obj2B_Main'], symbols['SolidObject'], count=128)
+        self.assertEqual(cpu.reg_read(UC_M68K_REG_PC), symbols['SolidObject'])
+        self.assertEqual(cpu.reg_read(UC_M68K_REG_A7), stack - 4)  # JSR return only.
+        self.assertEqual(cpu.mem_read(obj + symbols['y_radius'], 1)[0],
+                         radius + (4 if rising else 0))
+        return (cpu.reg_read(UC_M68K_REG_D1), cpu.reg_read(UC_M68K_REG_D2),
+                cpu.reg_read(UC_M68K_REG_D3) & 0xFFFF)
+
+    def test_initial_and_all_raised_collision_inputs_match_retail(self):
+        for radius in range(0x20, 0x39, 4):
+            expected = (0x1B, radius - 8, radius - 7)
+            for name in self.images:
+                with self.subTest(image=name, display_radius=hex(radius)):
+                    actual = self.collision(name, radius - 8 if name == 'retail' else radius)
+                    self.assertEqual(actual, expected)
+
+    def test_actual_rising_stage_keeps_display_radius_and_retail_collision(self):
+        for name in self.images:
+            with self.subTest(image=name):
+                actual = self.collision(name, 0x2C if name == 'retail' else 0x34, rising=True)
+                self.assertEqual(actual, (0x1B, 0x30, 0x31))
 
 
 class MCZDrillCompiledTests(unittest.TestCase):

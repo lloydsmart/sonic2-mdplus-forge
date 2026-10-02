@@ -12,14 +12,15 @@ or generated MiSTer packages.
 - Keep `config/dependencies.json` pinned to immutable commit hashes.
 - Treat dependency checkouts under `build/` as generated, read-only inputs.
 - Keep all generated material under ignored `build/`, `dist/`, or `inputs/`.
-- Production is the default, hardware-qualified flavour. Keep its identity and
-  compatibility symlink unchanged. Bugfixed has isolated prepared, ROM and
-  package outputs but currently must remain byte-identical to Production.
-  The separate no-MD+ `build-stock-bugfixed` development reference enables the
-  curated policy in `docs/BUGFIXED.md`. Do not feed it into MD+ preparation or
-  change MD+ hook addresses/profile identities without a separate integration
-  change. Keep Z80 and music/SFX data fixes off in that reference, and preserve
-  retail behaviour for the complete 2P sprite cluster and the `$FFF100-$FFF5FF` RAM hole.
+- Production is the default, hardware-qualified flavour. Keep its exact Stage 5
+  identity and compatibility symlink unchanged. Bugfixed integrates the frozen
+  curated policy in `docs/BUGFIXED.md` with Forge MD+ and has its own strict
+  identity, layout and isolated prepared, ROM and package outputs. It is
+  hardware-qualified on MiSTer Mega Drive core `26.06.03`. Reuse `apply_policy`;
+  do not reconstruct or change the curated policy inside the Forge adapter. Keep Z80
+  and music/SFX data fixes off, exclude Fixed Files and the complete alternate
+  2P sprite mechanism, and preserve the `$FFF100-$FFF5FF` RAM hole and Forge
+  allocations. Audit layout changes independently for both variants.
 - Do not guess loop points. New default-manifest loops require listening tests
   and MiSTer verification across multiple repetitions.
 - Preserve the delayed MD+ overlay activation; opening it before Sonic's
@@ -44,8 +45,9 @@ python3 -m tools.mdplus_builder validate-manifest --manifest config/tracks.json
 For source-conversion changes, also run the clean Linux regression described in
 the README and confirm that the generated ROM still matches the documented
 size, header checksum, MD+ signatures, and SHA-256 value. Run both ROM builds
-and `tests/check_bugfixed_binary.py` to check variant identity and equality,
-retaining all Production compiled suites and the `fixBugs=1` negative control.
+and `tests/check_bugfixed_binary.py` to check independent identities, curated
+baseline preservation and isolation. Run all three compiled CPU suites for both
+variants, retaining the Production `fixBugs=1` negative control.
 Build both stock references and run `tests/check_stock_bugfixed_binary.py` after
 both MD+ builds. Keep the stock Bugfixed strict identity and exclusion audits
 independent of the MD+ Bugfixed verification profile.

@@ -9,19 +9,20 @@ import test_modern
 
 from tools.mdplus_builder import modern
 from tools.mdplus_builder.common import BuildError
+from tools.mdplus_builder.variants import BuildVariant
 
 
 class ModernLiveStructureTests(unittest.TestCase):
     def test_all_four_direct_pause_patterns_have_exact_counts(self):
         fixture = test_modern.ModernAdapterTests.fixture
         for old, new, count in modern.PAUSE_SOURCES:
-            with patch.object(modern, 'UPSTREAM_S2_SHA256', hashlib.sha256(fixture).hexdigest()):
+            with patch.dict(modern.LAYOUT_PROFILES[BuildVariant.PRODUCTION].source_hashes, {'s2.asm': hashlib.sha256(fixture).hexdigest()}):
                 prepared = modern._prepare_modern_source(fixture).decode()
             self.assertEqual(prepared.count(new), count)
             self.assertNotIn(old, prepared)
             for delta in (-1, 1):
                 bad = fixture.replace(old.encode(), old.encode() * (1 + delta), 1)
-                with (patch.object(modern, 'UPSTREAM_S2_SHA256', hashlib.sha256(bad).hexdigest()),
+                with (patch.dict(modern.LAYOUT_PROFILES[BuildVariant.PRODUCTION].source_hashes, {'s2.asm': hashlib.sha256(bad).hexdigest()}),
                       self.assertRaisesRegex(BuildError, f'exactly {count} direct')):
                     modern._prepare_modern_source(bad)
 
@@ -39,7 +40,7 @@ class ModernLiveStructureTests(unittest.TestCase):
             self.assertIn(f'{name}+{size}>Game_Mode', text)
             self.assertIn(f'{name}<RAM_Start', text)
             self.assertIn(f'{name}+{size}>CrossResetRAM', text)
-        self.assertIn('(fixBugs<>0)', modern._modern_extension_source())
+        self.assertIn('(fixBugs<>ForgeExpectedFixBugs)', modern._modern_extension_source())
         self.assertEqual(modern._modern_router_source().count('beq.w   ForgeModernRequest'), 16)
         self.assertNotIn('@ROUTE@', text)
 

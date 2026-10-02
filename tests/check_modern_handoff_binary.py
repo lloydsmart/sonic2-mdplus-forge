@@ -8,6 +8,7 @@ from __future__ import annotations
 import unittest
 
 from cpu_machine import Machine
+from forge_test_profile import LAYOUT, PREPARED, verify
 from unicorn import UC_HOOK_CODE, UC_HOOK_MEM_READ
 from unicorn.m68k_const import UC_M68K_REG_A5, UC_M68K_REG_A6, UC_M68K_REG_PC
 
@@ -17,8 +18,8 @@ from tools.mdplus_builder.driver import saxman_decode
 
 class ModernMachine(Machine):
     def __init__(self):
-        super().__init__(modern.PREPARED_MODERN_DIR,
-                         modern.modern_symbols(modern.PREPARED_MODERN_DIR / 's2.lst'))
+        super().__init__(PREPARED,
+                         modern.modern_symbols(PREPARED / 's2.lst'))
 
     def set68(self, name, value):
         address = self.symbols[name]
@@ -64,7 +65,7 @@ class ModernMachine(Machine):
 class ModernHandoffTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        modern.verify_modern(modern.MODERN_ROM_PATH)
+        verify()
 
     def test_complete_internal_flow_and_ordered_ack(self):
         m = ModernMachine()
@@ -363,36 +364,36 @@ class ModernHandoffTests(unittest.TestCase):
 class ModernLoaderTests(unittest.TestCase):
     def test_actual_loader_equals_complete_multi_record_assembled_segment(self):
         m = ModernMachine()
-        expected = modern.assembled_modern_driver(modern.PREPARED_MODERN_DIR / 'forge-s2.p')
+        expected = modern.assembled_modern_driver(PREPARED / 'forge-s2.p')
         self.assertEqual(m.loaded, len(expected))
         self.assertEqual(bytes(m.z80.memory[:m.loaded]), expected)
         self.assertEqual(m.loaded, 4986)
-        self.assertEqual(m.cpu.reg_read(UC_M68K_REG_A6), modern.DRIVER_START + 4009)
-        print('Actual 68000 loader: 4009 compressed bytes -> all 4986 assembler bytes, exact match')
+        self.assertEqual(m.cpu.reg_read(UC_M68K_REG_A6), LAYOUT.driver_start + LAYOUT.compressed_size)
+        print(f'Actual 68000 loader: {LAYOUT.compressed_size} compressed bytes -> all {m.loaded} assembler bytes, exact match')
 
     def test_actual_loader_final_literal_and_match_without_overread(self):
         for packed, expected in ((b'\x01\xc9', b'\xc9'),
                                  (bytes.fromhex('0f32881bc9eef1'), bytes.fromhex('32881bc9') * 2)):
             m = ModernMachine()
-            m.cpu.mem_write(modern.DRIVER_START, packed + b'\xAA' * 16)
-            m.cpu.mem_write(modern.DRIVER_LENGTH_ADDRESS, len(packed).to_bytes(2, 'big'))
-            m.cpu.ctl_remove_cache(0xEC04A, modern.DRIVER_START)
+            m.cpu.mem_write(LAYOUT.driver_start, packed + b'\xAA' * 16)
+            m.cpu.mem_write(LAYOUT.driver_length, len(packed).to_bytes(2, 'big'))
+            m.cpu.ctl_remove_cache(m.symbols['DecompressSoundDriver'], LAYOUT.driver_start)
             m.cpu.mem_write(0xA00000, b'\xCC' * 0x2000)
             reads = []
             hook = m.cpu.hook_add(UC_HOOK_MEM_READ, lambda c, a, p, s, v, u, reads=reads: reads.append((p, s)),
-                                 begin=modern.DRIVER_START, end=modern.DRIVER_START + len(packed) + 16)
+                                 begin=LAYOUT.driver_start, end=LAYOUT.driver_start + len(packed) + 16)
             m.call68('DecompressSoundDriver')
             m.cpu.hook_del(hook)
             self.assertEqual(m.cpu.reg_read(UC_M68K_REG_A5) - 0xA00000, len(expected))
             self.assertEqual(bytes(m.cpu.mem_read(0xA00000, len(expected) + 1)), expected + b'\xCC')
-            self.assertEqual(reads, [(modern.DRIVER_START + i, 1) for i in range(len(packed))])
+            self.assertEqual(reads, [(LAYOUT.driver_start + i, 1) for i in range(len(packed))])
             self.assertEqual(m.mdplus, [])
 
     def test_service_calls_execute_inside_stock_vint_bus_lock(self):
         # The unchanged stock VInt code holds the bus across these call sites.
         # Check their source structure, then execute the input -> ACK call.
         # This harness does not emulate bus arbitration or unrelated graphics.
-        source = (modern.PREPARED_MODERN_DIR / 's2.asm').read_text()
+        source = (PREPARED / 's2.asm').read_text()
         for start, end in (('Vint_Level:', 'Vint_S2SS:'), ('Vint_TitleCard:', 'Vint_0E:')):
             block = source.split(start, 1)[1].split(end, 1)[0]
             self.assertLess(block.index('stopZ80'), block.index('sndDriverInput'))

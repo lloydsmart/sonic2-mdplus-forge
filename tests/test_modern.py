@@ -151,7 +151,7 @@ class ModernAdapterTests(unittest.TestCase):
     constants_fixture = modern.RAM_HOLE.encode()
 
     def test_exact_transform_has_one_small_hook_and_one_late_include(self) -> None:
-        with patch.object(modern, 'UPSTREAM_S2_SHA256', hashlib.sha256(self.fixture).hexdigest()):
+        with patch.dict(modern.LAYOUT_PROFILES[BuildVariant.PRODUCTION].source_hashes, {'s2.asm': hashlib.sha256(self.fixture).hexdigest()}):
             prepared = modern._prepare_modern_source(self.fixture).decode()
         self.assertEqual(prepared.count('PlayMusic:\n'), 1)
         self.assertEqual(prepared.count('jmp\t(ForgeModernPlayMusic).l'), 1)
@@ -171,7 +171,7 @@ class ModernAdapterTests(unittest.TestCase):
                 bad = self.fixture.replace(old.encode(), replacement.encode())
                 with (
                     self.subTest(pattern=old, replacement=replacement),
-                    patch.object(modern, 'UPSTREAM_S2_SHA256', hashlib.sha256(bad).hexdigest()),
+                    patch.dict(modern.LAYOUT_PROFILES[BuildVariant.PRODUCTION].source_hashes, {'s2.asm': hashlib.sha256(bad).hexdigest()}),
                     self.assertRaisesRegex(BuildError, 'exactly one'),
                 ):
                     modern._prepare_modern_source(bad)
@@ -198,9 +198,9 @@ class ModernAdapterTests(unittest.TestCase):
                 patch.object(variants, 'BUILD', root),
                 patch.object(modern, '_git_output', return_value=modern.AUDITED_MODERN_COMMIT),
                 patch.object(modern, '_clone_at', side_effect=clone),
-                patch.object(modern, 'UPSTREAM_S2_SHA256', hashlib.sha256(self.fixture).hexdigest()),
-                patch.object(modern, 'UPSTREAM_Z80_SHA256', hashlib.sha256(self.z80_fixture).hexdigest()),
-                patch.object(modern, 'UPSTREAM_CONSTANTS_SHA256', hashlib.sha256(self.constants_fixture).hexdigest()),
+                patch.dict(modern.LAYOUT_PROFILES[BuildVariant.PRODUCTION].source_hashes, {'s2.asm': hashlib.sha256(self.fixture).hexdigest()}),
+                patch.dict(modern.LAYOUT_PROFILES[BuildVariant.PRODUCTION].source_hashes, {'s2.sounddriver.asm': hashlib.sha256(self.z80_fixture).hexdigest()}),
+                patch.dict(modern.LAYOUT_PROFILES[BuildVariant.PRODUCTION].source_hashes, {'s2.constants.asm': hashlib.sha256(self.constants_fixture).hexdigest()}),
             ):
                 result = modern.prepare_modern()
                 first = (prepared / 's2.asm').read_bytes()
@@ -325,6 +325,7 @@ class ModernBinaryVerificationTests(unittest.TestCase):
         # Entirely synthetic baseline: identity expectations are patched, while
         # all real binary layout, signature and checksum checks are exercised.
         stock = bytearray(modern.STOCK_ROM_SIZE)
+        stock[modern.LAYOUT_PROFILES[BuildVariant.PRODUCTION].sound_end - 1] = 0xF2
         start = modern.PLAY_MUSIC_ADDRESS
         stock[start:start + 18] = modern.NATIVE_PLAY_MUSIC
         stock[0x18E:0x190] = bytes.fromhex('d951')
@@ -365,19 +366,20 @@ class ModernBinaryVerificationTests(unittest.TestCase):
             tempfile.TemporaryDirectory() as directory,
             patch.object(modern, 'STOCK_ROM_MD5', hashlib.md5(stock, usedforsecurity=False).hexdigest()),
             patch.object(modern, 'STOCK_ROM_SHA256', hashlib.sha256(stock).hexdigest()),
-            patch.object(modern, 'STOCK_MASKED_SHA256', hashlib.sha256(normalized).hexdigest()),
-            patch.object(modern, 'HANDOFF_SHA256', hashlib.sha256(original_handoff).hexdigest()),
-            patch.object(modern, 'ROUTER_SHA256', hashlib.sha256(data[modern.ROUTER_ADDRESS:modern.ROUTER_END]).hexdigest()),
-            patch.object(modern, 'ROUTINE_SHA256', routine_hashes),
-            patch.object(modern, 'DRIVER_REGION_SHA256', hashlib.sha256(data[modern.DRIVER_START:modern.DRIVER_LIMIT]).hexdigest()),
-            patch.object(modern, 'Z80_COMPRESSED_SIZE', 2),
-            patch.object(modern, 'Z80_LOADED_SIZE', 1),
-            patch.object(modern, 'Z80_SHA256', hashlib.sha256(b'\xc9').hexdigest()),
+            patch.dict(modern.LAYOUT_PROFILES, {BuildVariant.PRODUCTION: replace(
+                modern.LAYOUT_PROFILES[BuildVariant.PRODUCTION],
+                stock_masked_sha256=hashlib.sha256(normalized).hexdigest(),
+                handoff_sha256=hashlib.sha256(original_handoff).hexdigest(),
+                router_sha256=hashlib.sha256(data[modern.ROUTER_ADDRESS:modern.ROUTER_END]).hexdigest(),
+                routine_sha256=routine_hashes,
+                driver_sha256=hashlib.sha256(data[modern.DRIVER_START:modern.DRIVER_LIMIT]).hexdigest(),
+                compressed_size=2, loaded_size=1, loaded_sha256=hashlib.sha256(b'\xc9').hexdigest(),
+            )}),
         ):
             path = Path(directory) / 'synthetic.md'
             path.write_bytes(data)
             result = modern.verify_modern(path)
-            with self.assertRaisesRegex(BuildError, 'Production verification failed for .*Stage 5 target'):
+            with self.assertRaisesRegex(BuildError, 'Production verification failed for .*variant target'):
                 modern.verify_modern(path, strict_regression=True)
             profile = modern.VERIFICATION_PROFILES[BuildVariant.PRODUCTION]
             synthetic = replace(profile, checksum=result['header_checksum'],
@@ -395,6 +397,7 @@ class ModernBinaryVerificationTests(unittest.TestCase):
             for variant in BuildVariant:
                 cause = 'Modern loaded Z80 bytes differ from audited driver'
                 with (
+                    patch.dict(modern.LAYOUT_PROFILES, {variant: modern.LAYOUT_PROFILES[BuildVariant.PRODUCTION]}),
                     patch.object(modern, 'verify_modern_driver', side_effect=BuildError(cause)),
                     self.assertRaises(BuildError) as failure,
                 ):

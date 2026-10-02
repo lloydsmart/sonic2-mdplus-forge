@@ -11,6 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 BUILD = ROOT / "build"
+SOURCE_MODERN_DIR = BUILD / "source-modern"
 DIST = ROOT / "dist"
 DEPENDENCIES = ROOT / "config" / "dependencies.json"
 DEFAULT_MANIFEST = ROOT / "config" / "tracks.json"
