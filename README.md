@@ -38,11 +38,11 @@ The current production build and package commands use that exact hardware-tested
 ROM. Version 2.0.0 makes it the default while preserving its game and audio
 behavior. Production remains the default and hardware-qualified build.
 
-Bugfixed is a separate maintained MD+ build flavour with its own outputs. It
-still remains byte-identical to Production and provides no corrected gameplay.
-A separate no-MD+ stock Bugfixed development reference now establishes the
-[curated source policy](docs/BUGFIXED.md). The next phase will integrate MD+
-against that reference. The previous implementation remains retired.
+Bugfixed integrates the frozen [curated source policy](docs/BUGFIXED.md) with
+Forge MD+, using isolated outputs and its own audited ROM identity and layout.
+It is **hardware-qualified on MiSTer Mega Drive core `26.06.03`**. Z80 driver fixes,
+music/SFX data fixes, the alternate 2P sprite mechanism and Fixed Files remain
+excluded. Production retains its exact Stage 5 identity.
 
 ## What the build does
 
@@ -54,7 +54,7 @@ against that reference. The previous implementation remains retired.
    other music and all SFX use the native driver. Every MD+ command uses a
    short-lived overlay transaction after Sonic's startup checksum.
 4. Verifies the ROM's checksum, exact instruction signatures, loaded Z80
-   driver, size, MD5 and SHA-256 against the hardware-tested baseline.
+   driver, size, MD5 and SHA-256 against the selected variant's audited baseline.
 5. Normalizes user-supplied WAVs to 44.1 kHz signed 16-bit stereo PCM, trims
    them on exact 75 Hz sector boundaries, validates them, and generates a CUE.
 6. Creates an ignored `dist/` package ready to copy to MiSTer.
@@ -192,17 +192,38 @@ coexist, as do both prepared directories and ROMs. Custom `build-rom --output`
 paths cannot target the other flavour's reserved ROM or prepared directory.
 `clean` still removes all ignored build and distribution outputs.
 
-Internally, `BuildVariant` selects prepared/ROM paths, the package suffix and a
-separate strict verification profile. The shared preparation/build functions
-retain one source transformation path. Both profiles currently enforce the
-Production identity below and share every fixed-layout, MD+ transaction and
-Z80 audit. Future audited Bugfixed identity/layout differences belong at this
-profile boundary; changing Bugfixed must never rebaseline Production.
-In both MD+ flavours, `fixBugs` stays `0`, `FixDriverBugs` stays off, and the
-Stage 4 Z80 image and
-`$FFF100-$FFF5FF` RAM reservation remain unchanged. No upstream Fixed Files or
-new gameplay/data fixes are applied. Bugfixed does not yet provide corrected
-gameplay.
+Internally, `BuildVariant` selects isolated paths, package naming, strict ROM
+identity and an audited layout profile. Production adapts pristine pinned REV01.
+Bugfixed first applies the authoritative `bugfixed.apply_policy()` transformation,
+checks all three resulting source hashes, then applies the shared Forge adapter.
+Its backend starts at `$108000`, after the curated sound banks; Production
+stays at `$100000`. Each profile checks its own hooks, loader, compressed driver
+and reference baseline. Both preserve the same Forge RAM allocation and all
+21 short-lived MD+ command transactions, activated only after startup checksum.
+
+Bugfixed MD+ is 2,097,152 bytes, checksum `6B57`, MD5
+`cbcae2d2153ff7814347bd0013aefde5`, SHA-256
+`f80d983bdc44d5d89f3f7556e644a5b0ff5bf6e519ddacf0a3df73d4406449dc`.
+The revised curated policy retains upstream's ARZ Rising Pillar culling fix
+(explicit height, width `$1C`, display radius `$20`) while subtracting eight
+pixels only from its vertical collision half-height, restoring retail jumps at
+every rising stage. This narrowly corrects the gameplay regression found on
+MiSTer. Production and all audio/loop policy remain unchanged.
+
+The pre-correction SHA-256
+`8101cf55fcd20ee573be524b1e5e05f5aaecc31560832ffdc136543a5d8e26d6`
+passed a full 1P playthrough and a comprehensive 2P soak on core `26.06.03`,
+with only the ARZ pillar issue reported. After the narrow Obj2B correction,
+software audits proved unrelated Forge, Z80, sound, RAM and 2P machinery
+unchanged. Targeted revalidation of the exact revised `f80d983b...` ROM then
+passed in both ARZ acts and an EHZ 2P sample on the same core. The revised hash
+is now **hardware-qualified**; the full-game playthrough and comprehensive
+four-zone 2P soak remain evidence from the pre-correction hash.
+
+See [software validation and layout evidence](docs/BUGFIXED.md#forge-md-software-validation)
+for source integrity, exact hooks and bank relocations, and
+[MiSTer qualification evidence](docs/BUGFIXED.md#mister-hardware-qualification-and-historical-evidence)
+for the hardware results and their exact ROM identities.
 
 ## Earlier implementations
 
@@ -376,8 +397,10 @@ make source-bugfixed
 make rom-bugfixed
 python3 -m tools.mdplus_builder verify-rom \
   --bugfixed --strict-regression build/sonic2-mdplus-bugfixed.md
-cmp build/sonic2-mdplus.md build/sonic2-mdplus-bugfixed.md
 sha256sum build/sonic2-mdplus.md build/sonic2-mdplus-bugfixed.md
+FORGE_TEST_VARIANT=bugfixed PYTHONPATH=. build/emulation-venv/bin/python tests/check_modern_binary.py
+FORGE_TEST_VARIANT=bugfixed PYTHONPATH=. build/emulation-venv/bin/python tests/check_modern_handoff_binary.py
+FORGE_TEST_VARIANT=bugfixed PYTHONPATH=. build/emulation-venv/bin/python tests/check_modern_live_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_bugfixed_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_stock_bugfixed_binary.py
 ```
@@ -386,13 +409,14 @@ The binary suites check the exact production identity and execute compiled
 68000/Z80 instructions for the backend, handoff and live routing.
 `fixBugs=1` must be rejected by the fixed-layout assembly assertion. These tests
 do not model audible mixing, SD-card access or console bus timing.
-The Bugfixed binary check proves strict identity, independent profile selection,
-equal prepared source content and byte-for-byte ROM equality. CI retains all
-Production CPU suites and adds this structural check without duplicating those
-CPU suites for identical ROMs. The stock Bugfixed audit checks the source
-exclusions, compiled RAM and Z80 evidence, strict identity, deterministic
-recreation and isolation from both MD+ prepared trees and ROMs. It writes layout
-and adapter-pattern reports only under ignored `build/`.
+The Bugfixed binary check proves independent strict identity, exact curated
+source preparation, safe extension placement, hooks, all eight complete Z80
+bank-switch expansions and full 2 MiB curated-baseline reconstruction. It also
+rebuilds from deleted Bugfixed outputs and checks isolation in both build orders.
+CI runs the same three CPU suites against each variant; their default invocation
+remains Production. The stock Bugfixed audit independently checks the frozen
+source policy, exclusions, compiled gameplay, RAM and retail Z80 evidence.
+Generated audit reports and listings remain under ignored `build/`.
 
 For source-policy changes, run the same reference builds and compiled checks in
 a disposable clean Linux copy, with one `make bootstrap` and no reused build

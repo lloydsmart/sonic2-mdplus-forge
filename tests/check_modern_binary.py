@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import unittest
 
+from forge_test_profile import LAYOUT, ROM, verify
 from unicorn import UC_ARCH_M68K, UC_HOOK_MEM_WRITE, UC_MODE_BIG_ENDIAN, Uc
 from unicorn.m68k_const import (
     UC_CPU_M68K_M68000,
@@ -84,9 +85,9 @@ class ModernPlayMusicBinaryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         modern.verify_stock_modern(modern.STOCK_MODERN_ROM_PATH)
-        modern.verify_modern(modern.MODERN_ROM_PATH)
+        verify()
         cls.stock = NativeMachine(modern.STOCK_MODERN_ROM_PATH.read_bytes())
-        cls.prepared = NativeMachine(modern.MODERN_ROM_PATH.read_bytes())
+        cls.prepared = NativeMachine(ROM.read_bytes())
 
     def test_native_requests_and_raw_helper_exhaustively_match_stock(self):
         for request in range(256):
@@ -104,7 +105,7 @@ class ModernPlayMusicBinaryTests(unittest.TestCase):
                             (NativeMachine.SNAPSHOT & 0xFFFFFF, 2, expected_sr),
                         ]
                         stock = self.stock.call(d0, music0, 0x99, ccr)
-                        raw = self.prepared.call(d0, music0, 0x99, ccr, modern.IMPLEMENTATION_ADDRESS)
+                        raw = self.prepared.call(d0, music0, 0x99, ccr, LAYOUT.implementation)
                         self.assertEqual(raw, stock)
                         if request not in modern.MODERN_MUSIC_IDS.values():
                             prepared = self.prepared.call(d0, music0, 0x99, ccr)
@@ -169,8 +170,8 @@ class ModernPlayMusicBinaryTests(unittest.TestCase):
 class ModernBackendBinaryTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        modern.verify_modern(modern.MODERN_ROM_PATH)
-        cls.machine = NativeMachine(modern.MODERN_ROM_PATH.read_bytes())
+        verify()
+        cls.machine = NativeMachine(ROM.read_bytes())
 
     def check_command(self, entry, request, command, ccr):
         queue, sr, writes, _ = self.machine.call(0xA5C30000 | request, 0x85, 0x99, ccr, entry)
@@ -190,7 +191,7 @@ class ModernBackendBinaryTests(unittest.TestCase):
         for request, track in routes.items():
             for ccr in range(32):
                 with self.subTest(request=request, ccr=ccr):
-                    self.check_command(modern.DISPATCH_ADDRESS, request, 0x1200 | track, ccr)
+                    self.check_command((LAYOUT.implementation + 18), request, 0x1200 | track, ccr)
             print(f'Dispatch ${request:02X} -> track {track:02d}: CD54 -> {0x1200 | track:04X} -> 0000')
 
     def test_every_unsupported_byte_has_no_mdplus_or_mailbox_writes(self):
@@ -200,14 +201,14 @@ class ModernBackendBinaryTests(unittest.TestCase):
             for ccr in range(32):
                 with self.subTest(request=request, ccr=ccr):
                     queue, sr, writes, _ = self.machine.call(
-                        0xDEADBE00 | request, 0x85, 0x99, ccr, modern.DISPATCH_ADDRESS)
+                        0xDEADBE00 | request, 0x85, 0x99, ccr, (LAYOUT.implementation + 18))
                     self.assertEqual(queue, bytes([0x85, 0x42, 0x81, 0xF7, 0x99]))
                     self.assertEqual(sr & 0x10, ccr & 0x10)
                     self.assertEqual(writes, [(NativeMachine.SNAPSHOT & 0xFFFFFF, 2, sr)])
 
     def test_control_primitives_exact_traces_and_ccr(self):
         for index, command in enumerate((0x1300, 0x1328, 0x1400, 0x1519, 0x15FF)):
-            entry = 0x100094 + index * 26
+            entry = LAYOUT.implementation + 0x94 + index * 26
             for ccr in range(32):
                 with self.subTest(command=command, ccr=ccr):
                     self.check_command(entry, 0xF7, command, ccr)

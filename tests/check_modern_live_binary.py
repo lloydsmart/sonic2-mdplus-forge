@@ -11,6 +11,7 @@ import unittest
 
 from check_modern_binary import NativeMachine
 from check_modern_handoff_binary import ModernMachine
+from forge_test_profile import LAYOUT, PREPARED, ROM, VARIANT, verify
 from unicorn import UC_HOOK_CODE, UC_HOOK_MEM_READ, UC_HOOK_MEM_WRITE
 from unicorn.m68k_const import UC_M68K_REG_A3, UC_M68K_REG_A7, UC_M68K_REG_PC, UC_M68K_REG_SR
 
@@ -67,7 +68,7 @@ class LiveMachine(ModernMachine):
 class ModernLiveTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        modern.verify_modern(modern.MODERN_ROM_PATH)
+        verify()
         modern.verify_stock_modern(modern.STOCK_MODERN_ROM_PATH)
 
     def test_native_to_mdplus_only_after_actual_z80_ack_store(self):
@@ -382,25 +383,25 @@ class ModernLiveTests(unittest.TestCase):
         print('Active MD+: jump/ring requests consumed for 16 pairs of Z80 VInts, no ownership change or track restart')
 
     def test_direct_pause_sites_exact_footprint_registers_ccr_and_routing(self):
-        m = NativeMachine(modern.MODERN_ROM_PATH.read_bytes())
-        for site, request, target in ((0x13AC, 0xFE, 'ForgeModernPauseRequest'),
-                                      (0x13F2, 0xFF, 'ForgeModernUnpauseRequest'),
-                                      (0x1406, 0xFF, 'ForgeModernUnpauseRequest'),
-                                      (0x541A, 0xFF, 'ForgeModernUnpauseRequest')):
+        m = NativeMachine(ROM.read_bytes())
+        for site, (target, _, original) in LAYOUT.live_hooks.items():
+            if target not in ('ForgeModernPauseRequest', 'ForgeModernUnpauseRequest'):
+                continue
+            request = bytes.fromhex(original)[3]
             self.assertEqual(bytes(m.cpu.mem_read(site, 6)), bytes.fromhex('4eb9') +
-                             modern.ROUTER_ADDRESSES[target].to_bytes(4, 'big'))
+                             LAYOUT.router[target].to_bytes(4, 'big'))
             for owner in (0, 1):
                 for ccr in range(32):
                     state = {'ForgeModernOwner': owner, 'ForgeModernActive': owner,
                              'ForgeModernPaused': owner if request == 0xFF else 0}
-                    q, sr, writes, _ = m.call(0x12345678, 0, 0, ccr, modern.ROUTER_ADDRESSES[target], state)
+                    q, sr, writes, _ = m.call(0x12345678, 0, 0, ccr, LAYOUT.router[target], state)
                     self.assertEqual(sr, 0x2308 | ccr & 16)
                     self.assertEqual(q[0], 0 if owner else request)
                     commands = [v for a, _, v in writes if a == 0x3F7FE]
                     self.assertEqual(commands, [0x1300 if request == 0xFE else 0x1400] if owner else [])
-        prepared = (modern.PREPARED_MODERN_DIR / 's2.asm').read_text()
+        prepared = (PREPARED / 's2.asm').read_text()
         self.assertIsNone(re.search(r'move\.b\s+#MusID_(?:Pause|Unpause),\(Sound_Queue.Music[01]\)', prepared))
-        print('Direct pause sites: 0013AC FE; 0013F2/001406/00541A FF, all six-byte calls, all CCRs/registers preserved')
+        print('Direct pause sites verified for', VARIANT.value)
 
     def test_cold_warm_and_failed_checksum_first_mdplus_write(self):
         for boot in ('cold', 'warm', 'bad_checksum'):
@@ -452,14 +453,18 @@ class ModernLiveTests(unittest.TestCase):
         m = LiveMachine()
         driver = bytes(m.z80.memory[:m.loaded])
         self.assertEqual(len(driver), 4986)
-        self.assertEqual(hashlib.sha256(driver).hexdigest(), modern.Z80_SHA256)
-        self.assertEqual(m.rom[0x100000:0x1002B6], modern.expected_modern_extension())
+        self.assertEqual(hashlib.sha256(driver).hexdigest(), LAYOUT.loaded_sha256)
+        self.assertEqual(m.rom[LAYOUT.implementation:LAYOUT.implementation_end], modern.expected_modern_extension())
         source = (modern.SOURCE_MODERN_DIR / 's2.asm').read_text()
         self.assertEqual(len(re.findall(r'^\s*move\.w\s+#MusID_ExtraLife,d0', source, re.M)), 6)
         # All six call sites remain byte-identical and target audited wrappers.
         pattern = bytes.fromhex('303c00984ef9')
         sites = [match.start() for match in re.finditer(re.escape(pattern), m.rom)]
-        self.assertEqual(sites, [0x12012, 0x1206E, 0x1294A, 0x12960, 0x40D36, 0x40D7E])
+        expected = {
+            'production': [0x12012, 0x1206E, 0x1294A, 0x12960, 0x40D36, 0x40D7E],
+            'bugfixed': [0x1223a, 0x12296, 0x12b7a, 0x12b90, 0x41292, 0x412da],
+        }
+        self.assertEqual(sites, expected[VARIANT.value])
         for address in sites:
             self.assertIn(int.from_bytes(m.rom[address + 6:address + 10], 'big'), (0x135E, 0x1376))
         print('Six unchanged extra-life request sites:', [f'{a:06X}' for a in sites])

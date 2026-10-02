@@ -85,7 +85,9 @@ jobs:
         run: |
           make rom-bugfixed
           python -m tools.mdplus_builder verify-rom --bugfixed --strict-regression build/sonic2-mdplus-bugfixed.md
-          cmp build/sonic2-mdplus.md build/sonic2-mdplus-bugfixed.md
+          FORGE_TEST_VARIANT=bugfixed PYTHONPATH=. python tests/check_modern_binary.py
+          FORGE_TEST_VARIANT=bugfixed PYTHONPATH=. python tests/check_modern_handoff_binary.py
+          FORGE_TEST_VARIANT=bugfixed PYTHONPATH=. python tests/check_modern_live_binary.py
           PYTHONPATH=. python tests/check_bugfixed_binary.py
       - name: Audit curated stock Bugfixed policy, layout and deterministic isolation
         run: PYTHONPATH=. python tests/check_stock_bugfixed_binary.py

@@ -7,11 +7,11 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from .common import BUILD, DEPENDENCIES, ROM_PATH, BuildError, load_json, require_program, run
+from . import bugfixed
+from .common import BUILD, DEPENDENCIES, ROM_PATH, SOURCE_MODERN_DIR, BuildError, load_json, require_program, run
 from .source import ADDRYU_TRACKS, _clone_at, _git_output
 from .variants import BuildVariant
 
-SOURCE_MODERN_DIR = BUILD / "source-modern"
 STOCK_MODERN_ROM_PATH = BUILD / "sonic2-stock-modern.md"
 STOCK_MODERN_LISTING_PATH = BUILD / "sonic2-stock-modern.lst"
 STOCK_ROM_SIZE = 1_048_576
@@ -80,11 +80,7 @@ PRODUCTION_SHA256 = "bd12138cd478596e4d294a06f573a98a6d37747dfe58d726ca62cf50dc3
 
 @dataclass(frozen=True)
 class VerificationProfile:
-    """Variant identity; both variants currently use the same fixed layout audit.
-
-    Future audited layout differences belong at this profile boundary, alongside
-    the identity, rather than bypassing the common verification machinery.
-    """
+    """Frozen ROM identity, separate from the instruction/layout audit."""
 
     size: int
     checksum: str
@@ -96,10 +92,10 @@ VERIFICATION_PROFILES = {
     BuildVariant.PRODUCTION: VerificationProfile(
         PREPARED_ROM_SIZE, PRODUCTION_CHECKSUM, PRODUCTION_MD5, PRODUCTION_SHA256,
     ),
-    # An independent expectation: future Bugfixed changes must not rebaseline Production.
+    # Independently reproduced curated MD+ identity; never rebaseline Production.
     BuildVariant.BUGFIXED: VerificationProfile(
-        2_097_152, "BE41", "9eb40c0601a7c424a0d1ce168b5f40f2",
-        "bd12138cd478596e4d294a06f573a98a6d37747dfe58d726ca62cf50dc3a8c44",
+        2_097_152, "6B57", "cbcae2d2153ff7814347bd0013aefde5",
+        "f80d983bdc44d5d89f3f7556e644a5b0ff5bf6e519ddacf0a3df73d4406449dc",
     ),
 }
 
@@ -174,14 +170,15 @@ def expected_modern_extension() -> bytes:
     return bytes(code)
 
 
-def _modern_extension_source() -> str:
+def _modern_extension_source(variant: BuildVariant = BuildVariant.PRODUCTION) -> str:
+    layout = LAYOUT_PROFILES[variant]
     text = Path(__file__).with_name("hybrid_modern.asm").read_text(encoding="utf-8")
     dispatch = "\n".join(
         f"    cmp.b   #{symbol},d0\n    beq.w   ForgeModernTrack{track:02d}"
         for symbol, track in ADDRYU_TRACKS
     )
     commands = "\n".join(
-        f'{label}:\n    if {label}<>${PRIMITIVE_ADDRESSES[label]:06X}\n'
+        f'{label}:\n    if {label}<>${PRIMITIVE_ADDRESSES[label] + layout.delta:06X}\n'
         f'        fatal "Unexpected {label} boundary"\n    endif\n'
         f"    move.w  #$CD54,(MDP_CTRL).l\n"
         f"    move.w  #${command:04X},(MDP_CMD).l\n"
@@ -192,7 +189,13 @@ def _modern_extension_source() -> str:
         if text.count(marker) != 1:
             raise BuildError(f"Expected exactly one modern include marker: {marker}")
         text = text.replace(marker, replacement)
-    return text
+    policy = ("    if (ForgeFix2PSpritePageFlip<>0)||(FixDriverBugs<>0)||"
+              "(FixMusicAndSFXDataBugs<>0)\n"
+              '        fatal "Forge requires the frozen curated policy"\n    endif\n'
+              if layout.curated else "")
+    return (f"ForgeExpectedFixBugs = {int(layout.curated)}\n"
+            f"ForgeImplementationBase = ${layout.implementation:06X}\n"
+            f"ForgeSoundDataEnd = ${layout.sound_end:06X}\n" + policy + text)
 
 
 # Every mutated upstream input is locked to the same audited modern commit.
@@ -285,7 +288,8 @@ def _sound_hook(name: str, address: int) -> str:
             f'; End of function {name}\n')
 
 
-def _modern_router_source() -> str:
+def _modern_router_source(variant: BuildVariant = BuildVariant.PRODUCTION) -> str:
+    layout = LAYOUT_PROFILES[variant]
     text = Path(__file__).with_name("hybrid_modern_router.asm").read_text()
     routes = "\n".join(f"    cmp.b   #{symbol},d0\n    beq.w   ForgeModernRequest"
                        for symbol, _ in ADDRYU_TRACKS)
@@ -299,7 +303,7 @@ def _modern_router_source() -> str:
             f'        fatal "{name} must occupy unused GameInit-cleared RAM"\n    endif\n')
     prefix = "".join(assertions)
     assertions = []
-    for name, address in ROUTER_ADDRESSES.items():
+    for name, address in layout.router.items():
         assertions.append(f'    if {name}<>${address:06X}\n'
                           f'        fatal "Unexpected {name} boundary"\n    endif\n')
     return prefix + text + "".join(assertions)
@@ -314,9 +318,11 @@ def _replace_modern(text: str, old: str, new: str) -> str:
     return text.replace(old, new)
 
 
-def _prepare_modern_source(data: bytes, filename: str = "s2.asm") -> bytes:
-    hashes = {"s2.asm": UPSTREAM_S2_SHA256, "s2.sounddriver.asm": UPSTREAM_Z80_SHA256,
-              "s2.constants.asm": UPSTREAM_CONSTANTS_SHA256}
+def _prepare_modern_source(
+    data: bytes, filename: str = "s2.asm", *, variant: BuildVariant = BuildVariant.PRODUCTION,
+) -> bytes:
+    layout = LAYOUT_PROFILES[variant]
+    hashes = layout.source_hashes
     if filename not in hashes or hashlib.sha256(data).hexdigest() != hashes[filename]:
         raise BuildError(f"Pinned modern {filename} source structure changed")
     text = data.decode("utf-8")
@@ -327,7 +333,7 @@ def _prepare_modern_source(data: bytes, filename: str = "s2.asm") -> bytes:
         start = text.index(INPUT_START)
         end = text.index(INPUT_END, start) + len(INPUT_END)
         replacements = ((NATIVE_SOURCE, HOOK_SOURCE), (TAIL_SOURCE, TAIL_REPLACEMENT),
-                        (text[start:end], INPUT_HOOK), (LOADER_SOURCE, LOADER_HOOK),
+                        (text[start:end], INPUT_HOOK), (LOADER_SOURCE, layout.loader_hook),
                         (SOUND_SOURCE, _sound_hook("PlaySound", 0x1370)),
                         (SOUND2_SOURCE, _sound_hook("PlaySound2", 0x1376)),
                         (VINT_SOURCE, VINT_HOOK), (RESET_SOURCE, RESET_HOOK))
@@ -371,15 +377,17 @@ def prepare_modern(*, variant: BuildVariant = BuildVariant.PRODUCTION) -> dict[s
     with tempfile.TemporaryDirectory(prefix=f"prepare-{variant.value}-", dir=BUILD) as directory:
         work = Path(directory) / "source"
         _clone_at(dependency["url"], dependency["commit"], work, SOURCE_MODERN_DIR)
+        if LAYOUT_PROFILES[variant].curated:
+            bugfixed.apply_policy(work)
         for filename in ("s2.asm", "s2.sounddriver.asm", "s2.constants.asm"):
             path = work / filename
-            path.write_bytes(_prepare_modern_source(path.read_bytes(), filename))
+            path.write_bytes(_prepare_modern_source(path.read_bytes(), filename, variant=variant))
         for filename in ("hybrid_modern.asm", "hybrid_modern_handoff.asm",
                          "hybrid_modern_z80.asm", "hybrid_modern_router.asm", "modern_build.lua"):
             if (work / filename).exists():
                 raise BuildError("Modern source already contains Forge's include filename")
-            content = (_modern_extension_source() if filename == "hybrid_modern.asm" else
-                       _modern_router_source() if filename == "hybrid_modern_router.asm" else
+            content = (_modern_extension_source(variant) if filename == "hybrid_modern.asm" else
+                       _modern_router_source(variant) if filename == "hybrid_modern_router.asm" else
                        Path(__file__).with_name(filename).read_text(encoding="utf-8"))
             (work / filename).write_text(content, encoding="utf-8")
         # Only this generated output is replaced; dependency checkouts are inputs.
@@ -479,10 +487,113 @@ LIVE_HOOKS = {
 }
 
 
-def expected_live_hooks() -> dict[int, bytes]:
-    return {address: bytes.fromhex(op) + ROUTER_ADDRESSES[label].to_bytes(4, "big") +
+@dataclass(frozen=True)
+class LayoutProfile:
+    """The two audited Forge layouts; offsets are shared only for identical code."""
+
+    curated: bool
+    source_hashes: dict[str, str]
+    sound_end: int
+    implementation: int
+    live_hooks: dict[int, tuple[str, str, str]]
+    sax_helper: int
+    driver_length: int
+    driver_start: int
+    driver_limit: int
+    compressed_size: int
+    loaded_size: int
+    loaded_sha256: str
+    driver_sha256: str
+    handoff_sha256: str
+    router_sha256: str
+    routine_sha256: dict[str, str]
+    stock_size: int
+    stock_checksum: str
+    stock_masked_sha256: str
+
+    @property
+    def delta(self) -> int:
+        return self.implementation - IMPLEMENTATION_ADDRESS
+
+    @property
+    def implementation_end(self) -> int:
+        return IMPLEMENTATION_END + self.delta
+
+    @property
+    def handoff(self) -> dict[str, int]:
+        return {n: a + self.delta for n, a in HANDOFF_ADDRESSES.items()}
+
+    @property
+    def router(self) -> dict[str, int]:
+        return {n: a + self.delta for n, a in ROUTER_ADDRESSES.items()}
+
+    @property
+    def router_end(self) -> int:
+        return ROUTER_END + self.delta
+
+    @property
+    def completion(self) -> int:
+        return COMPLETION_ADDRESS + self.delta
+
+    @property
+    def hook_bytes(self) -> bytes:
+        return bytes.fromhex("4ef9") + self.router["ForgeModernPlayMusic"].to_bytes(4, "big") + bytes.fromhex("4e71") * 6
+
+    @property
+    def loader_hook(self) -> str:
+        return LOADER_HOOK.replace("$EC0DE", f"${self.sax_helper:X}").replace("$EC0E8", f"${self.driver_start:X}")
+
+    @property
+    def changed_regions(self) -> tuple[tuple[int, int], ...]:
+        regions = ((0x1084, 0x10E0), (self.driver_length, self.driver_length + 2),
+                   (self.sax_helper, self.driver_limit))
+        # Production's baseline ends before Forge; curated's covers all 2 MiB.
+        if self.curated:
+            regions += ((self.implementation, self.router_end),)
+        return regions
+
+
+LAYOUT_PROFILES = {
+    BuildVariant.PRODUCTION: LayoutProfile(
+        False, {"s2.asm": UPSTREAM_S2_SHA256, "s2.constants.asm": UPSTREAM_CONSTANTS_SHA256,
+                "s2.sounddriver.asm": UPSTREAM_Z80_SHA256},
+        0xFFFEC, IMPLEMENTATION_ADDRESS, LIVE_HOOKS, 0xEC0DE, DRIVER_LENGTH_ADDRESS,
+        DRIVER_START, DRIVER_LIMIT, Z80_COMPRESSED_SIZE, Z80_LOADED_SIZE, Z80_SHA256,
+        DRIVER_REGION_SHA256, HANDOFF_SHA256, ROUTER_SHA256, ROUTINE_SHA256,
+        STOCK_ROM_SIZE, "D951", STOCK_MASKED_SHA256,
+    ),
+    BuildVariant.BUGFIXED: LayoutProfile(
+        True, {
+            "s2.asm": "bcfdb7a6738bb673d59f42e7d5b77db7f8998bea40fe367c6221c317799da3d6",
+            "s2.constants.asm": "e6fac75b24da9ecbd2a11ab7d474a3fe1426afa134ef41d9170202f95e77ac54",
+            "s2.sounddriver.asm": "ce96d9dda766fefa33de23ddccea373b58aceb92ec2a91fba30d998105d667a8",
+        },
+        0x107FEC, 0x108000, {
+            0x382: ("ForgeModernInit", "4eb9", "61000dd461000f82"),
+            0x45E: ("ForgeModernVintReturn", "4ef9", "52b8fe0c4cdf7fff4e73"),
+            0x1370: ("ForgeModernPlaySound", "4ef9", "11c0ffe14e75"),
+            0x1376: ("ForgeModernPlaySound2", "4ef9", "11c0ffe24e75"),
+            0x13C4: ("ForgeModernPauseRequest", "4eb9", "11fc00feffe0"),
+            0x140A: ("ForgeModernUnpauseRequest", "4eb9", "11fc00ffffe0"),
+            0x141E: ("ForgeModernUnpauseRequest", "4eb9", "11fc00ffffe0"),
+            0x547A: ("ForgeModernUnpauseRequest", "4eb9", "11fc00ffffe0"),
+        },
+        0xED0DE, 0xED050, 0xED0E8, 0xF5100,
+        4011, 0x137A, "f2883990453ba7deedc682b3970be0d2c73fea99a566a30d43362c2769ac7041",
+        "b9788df25eb06f84bacdb03b620c256a72001c533c08770faa7a93826ef985e1",
+        # Relative branches keep all backend/router bytes identical. The only
+        # absolute internal pointer is the separately checked ACK callback.
+        HANDOFF_SHA256, ROUTER_SHA256, dict(ROUTINE_SHA256),
+        0x200000, "FDED", "1eccd7628d0481f119dcc8c3cabd5772a6d0f4625d6bd6dc0b2b828ee553dee4",
+    ),
+}
+
+
+def expected_live_hooks(variant: BuildVariant = BuildVariant.PRODUCTION) -> dict[int, bytes]:
+    layout = LAYOUT_PROFILES[variant]
+    return {address: bytes.fromhex(op) + layout.router[label].to_bytes(4, "big") +
             bytes.fromhex("4e71") * ((len(bytes.fromhex(original)) - 6) // 2)
-            for address, (label, op, original) in LIVE_HOOKS.items()}
+            for address, (label, op, original) in layout.live_hooks.items()}
 
 
 def modern_symbols(path: Path) -> dict[str, int]:
@@ -536,22 +647,25 @@ def assembled_modern_driver(path: Path) -> bytes:
     return bytes(output)
 
 
-def verify_modern_driver(data: bytes, assembled: bytes | None = None) -> dict[str, int | str]:
+def verify_modern_driver(
+    data: bytes, assembled: bytes | None = None, *, variant: BuildVariant = BuildVariant.PRODUCTION,
+) -> dict[str, int | str]:
+    layout = LAYOUT_PROFILES[variant]
     from .driver import LOADER_READ, saxman_decode
 
-    helper = HANDOFF_ADDRESSES["ForgeModernSaxGetByte"]
+    helper = layout.handoff["ForgeModernSaxGetByte"]
     if data[helper:helper + len(LOADER_READ)] != LOADER_READ or data.count(LOADER_READ) != 1:
         raise BuildError("Modern loader fix changed or is duplicated")
-    if data[0xEC0DE:DRIVER_START] != bytes.fromhex("4ef9") + helper.to_bytes(4, "big") + bytes.fromhex("4e714e71"):
+    if data[layout.sax_helper:layout.driver_start] != bytes.fromhex("4ef9") + helper.to_bytes(4, "big") + bytes.fromhex("4e714e71"):
         raise BuildError("Modern loader trampoline changed")
-    length = int.from_bytes(data[DRIVER_LENGTH_ADDRESS:DRIVER_LENGTH_ADDRESS + 2], "big")
-    if length != Z80_COMPRESSED_SIZE or DRIVER_START + length > DRIVER_LIMIT:
+    length = int.from_bytes(data[layout.driver_length:layout.driver_length + 2], "big")
+    if length != layout.compressed_size or layout.driver_start + length > layout.driver_limit:
         raise BuildError("Modern compressed driver exceeds its audited reserved region/length")
-    packed = data[DRIVER_START:DRIVER_LIMIT]
-    if hashlib.sha256(packed).hexdigest() != DRIVER_REGION_SHA256:
+    packed = data[layout.driver_start:layout.driver_limit]
+    if hashlib.sha256(packed).hexdigest() != layout.driver_sha256:
         raise BuildError("Modern compressed driver/padding differs from audited bytes")
     loaded = saxman_decode(packed[:length])
-    if len(loaded) != Z80_LOADED_SIZE or hashlib.sha256(loaded).hexdigest() != Z80_SHA256:
+    if len(loaded) != layout.loaded_size or hashlib.sha256(loaded).hexdigest() != layout.loaded_sha256:
         raise BuildError("Modern loaded Z80 bytes differ from audited driver")
     if assembled is not None and loaded != assembled:
         raise BuildError("Modern loaded Z80 bytes differ from assembler object")
@@ -570,6 +684,7 @@ def _verify_modern(
     except OSError as exc:
         raise BuildError(f"Cannot read modern MD+ ROM {path}: {exc}") from exc
     profile = VERIFICATION_PROFILES[variant]
+    layout = LAYOUT_PROFILES[variant]
     if len(data) != profile.size:
         raise BuildError(f"Modern MD+ ROM size is {len(data)}, expected {profile.size}")
     stored, calculated = genesis_checksum(data)
@@ -591,74 +706,80 @@ def _verify_modern(
         "overlay_close_signatures": 21,
     }:
         raise BuildError(f"Unexpected MD+ signature in modern MD+: {signatures}")
-    if data[PLAY_MUSIC_ADDRESS:PLAY_MUSIC_ADDRESS + 18] != HOOK_BYTES or data.count(HOOK_BYTES) != 1:
+    # Both audited final banks end in the last SFX's SMPS stop byte. Check the
+    # observed end and gap explicitly, in addition to the full baseline digest.
+    if (not 0 < layout.sound_end < layout.implementation
+            or data[layout.sound_end - 1] != 0xF2
+            or any(data[layout.sound_end:layout.implementation])):
+        raise BuildError("Modern sound-data end or trailing bank padding changed")
+    if data[PLAY_MUSIC_ADDRESS:PLAY_MUSIC_ADDRESS + 18] != layout.hook_bytes or data.count(layout.hook_bytes) != 1:
         raise BuildError("Modern PlayMusic absolute jump/footprint changed or is duplicated")
-    if data[IMPLEMENTATION_ADDRESS:IMPLEMENTATION_ADDRESS + 18] != NATIVE_PLAY_MUSIC:
+    if data[layout.implementation:layout.implementation + 18] != NATIVE_PLAY_MUSIC:
         raise BuildError("Modern native mailbox implementation changed")
-    extension = data[IMPLEMENTATION_ADDRESS:IMPLEMENTATION_END]
+    extension = data[layout.implementation:layout.implementation_end]
     if extension != expected_modern_extension():
         raise BuildError("Modern backend differs from exact audited instructions/transactions")
-    callback = bytes.fromhex("4ef9") + ROUTER_ADDRESSES["ForgeModernComplete"].to_bytes(4, "big")
-    if data[COMPLETION_ADDRESS:COMPLETION_ADDRESS + 6] != callback:
+    callback = bytes.fromhex("4ef9") + layout.router["ForgeModernComplete"].to_bytes(4, "big")
+    if data[layout.completion:layout.completion + 6] != callback:
         raise BuildError("Modern ACK completion callback changed")
-    handoff = bytearray(data[IMPLEMENTATION_END:HANDOFF_END])
-    relative = COMPLETION_ADDRESS - IMPLEMENTATION_END
+    handoff = bytearray(data[layout.implementation_end:layout.router["ForgeModernPlayMusic"]])
+    relative = layout.completion - layout.implementation_end
     handoff[relative:relative + 6] = bytes.fromhex("4238f1134e75")
-    if hashlib.sha256(handoff).hexdigest() != HANDOFF_SHA256:
+    if hashlib.sha256(handoff).hexdigest() != layout.handoff_sha256:
         raise BuildError("Modern handoff differs from audited instructions")
-    input_hook = bytes.fromhex("4ef9") + HANDOFF_ADDRESSES["ForgeModernInput"].to_bytes(4, "big")
+    input_hook = bytes.fromhex("4ef9") + layout.handoff["ForgeModernInput"].to_bytes(4, "big")
     if data[0x1084:0x10E0] != input_hook + bytes(0x10E0 - 0x1084 - len(input_hook)):
         raise BuildError("Modern input trampoline/footprint changed")
-    for address, expected in expected_live_hooks().items():
+    for address, expected in expected_live_hooks(variant).items():
         if data[address:address + len(expected)] != expected:
             raise BuildError(f"Modern live hook/footprint changed at {address:06X}")
-    router = data[ROUTER_ADDRESS:ROUTER_END]
-    if hashlib.sha256(router).hexdigest() != ROUTER_SHA256:
+    router = data[layout.router["ForgeModernPlayMusic"]:layout.router_end]
+    if hashlib.sha256(router).hexdigest() != layout.router_sha256:
         raise BuildError("Modern live router differs from audited instructions")
-    routines = list(ROUTER_ADDRESSES.items())
+    routines = list(layout.router.items())
     for (name, start), (_, end) in zip(routines[:-1], routines[1:], strict=True):
-        if hashlib.sha256(data[start:end]).hexdigest() != ROUTINE_SHA256[name]:
+        if hashlib.sha256(data[start:end]).hexdigest() != layout.routine_sha256[name]:
             raise BuildError(f"Modern routine differs from audited instructions: {name}")
-    driver = verify_modern_driver(data)
-    if any(data[ROUTER_END:]):
+    driver = verify_modern_driver(data, variant=variant)
+    if any(data[layout.router_end:]):
         raise BuildError("Unexpected data after modern implementation (expected zero padding)")
 
     # Reconstruct the stock hook/header, then normalize only the EXACTLY audited
     # input/loader/driver regions above. Require the digest of all remaining
     # stock bytes, including both sides of the driver growth padding. No broad
     # range is ignored: each normalized byte was already checked independently.
-    stock = bytearray(data[:STOCK_ROM_SIZE])
+    stock = bytearray(data[:layout.stock_size])
     stock[PLAY_MUSIC_ADDRESS:PLAY_MUSIC_ADDRESS + 18] = NATIVE_PLAY_MUSIC
-    for address, (_, _, original) in LIVE_HOOKS.items():
+    for address, (_, _, original) in layout.live_hooks.items():
         baseline = bytes.fromhex(original)
         stock[address:address + len(baseline)] = baseline
-    stock[0x18E:0x190] = bytes.fromhex("d951")
-    stock[0x1A4:0x1A8] = (STOCK_ROM_SIZE - 1).to_bytes(4, "big")
-    for start, end in STOCK_CHANGED_REGIONS:
+    stock[0x18E:0x190] = bytes.fromhex(layout.stock_checksum)
+    stock[0x1A4:0x1A8] = (layout.stock_size - 1).to_bytes(4, "big")
+    for start, end in layout.changed_regions:
         stock[start:end] = bytes(end - start)
-    if hashlib.sha256(stock).hexdigest() != STOCK_MASKED_SHA256:
+    if hashlib.sha256(stock).hexdigest() != layout.stock_masked_sha256:
         raise BuildError("Modern MD+ changed bytes outside the audited stock regions")
     result = {
         "size": len(data), "header_checksum": f"{stored:04X}",
         "md5": hashlib.md5(data, usedforsecurity=False).hexdigest(),
         "sha256": hashlib.sha256(data).hexdigest(),
         "play_music_address": f"{PLAY_MUSIC_ADDRESS:06X}",
-        "implementation_address": f"{IMPLEMENTATION_ADDRESS:06X}",
-        "native_implementation_end": f"{DISPATCH_ADDRESS:06X}",
-        "dispatch_address": f"{DISPATCH_ADDRESS:06X}",
-        "implementation_end": f"{IMPLEMENTATION_END:06X}",
+        "implementation_address": f"{layout.implementation:06X}",
+        "native_implementation_end": f"{(DISPATCH_ADDRESS + layout.delta):06X}",
+        "dispatch_address": f"{(DISPATCH_ADDRESS + layout.delta):06X}",
+        "implementation_end": f"{layout.implementation_end:06X}",
         "extension_sha256": hashlib.sha256(extension).hexdigest(),
         "command_transactions": 21,
-        "handoff_end": f"{HANDOFF_END:06X}",
-        "router_address": f"{ROUTER_ADDRESS:06X}",
-        "router_end": f"{ROUTER_END:06X}",
+        "handoff_end": f"{layout.router['ForgeModernPlayMusic']:06X}",
+        "router_address": f"{layout.router['ForgeModernPlayMusic']:06X}",
+        "router_end": f"{layout.router_end:06X}",
         "router_sha256": hashlib.sha256(router).hexdigest(),
         **driver, **signatures,
     }
     if strict_regression and (
         result["header_checksum"], result["md5"], result["sha256"]
     ) != (profile.checksum, profile.md5, profile.sha256):
-        raise BuildError(f"Modern ROM differs from the audited Stage 5 target: {result}")
+        raise BuildError(f"Modern ROM differs from the audited variant target: {result}")
     return result
 
 
@@ -698,9 +819,10 @@ def build_modern(
     run([lua, "modern_build.lua"], cwd=prepared_dir)
     built = prepared_dir / "s2built.bin"
     result = verify_modern(built, strict_regression=True, variant=variant)
-    verify_modern_driver(built.read_bytes(), assembled_modern_driver(prepared_dir / "forge-s2.p"))
+    verify_modern_driver(built.read_bytes(), assembled_modern_driver(prepared_dir / "forge-s2.p"), variant=variant)
     symbols = modern_symbols(prepared_dir / "s2.lst")
-    for name, address in (HANDOFF_ADDRESSES | ROUTER_ADDRESSES |
+    layout = LAYOUT_PROFILES[variant]
+    for name, address in (layout.handoff | layout.router |
                           {n: a for n, (a, _) in RAM_STATE.items()}).items():
         if symbols.get(name) != address:
             raise BuildError(f"Modern audited symbol moved: {name}")

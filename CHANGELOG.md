@@ -9,25 +9,42 @@ Versioning for its own tooling releases.
 
 ### Added
 
-- Correct the enabled upstream MCZ boss drill-detachment fix's right-drill
-  operand in the stock Bugfixed policy, verify both orientations against the
-  compiled ROM and re-baseline its strict identity. Freeze sound-bank layout
-  addresses and document significant included fixes and the 2 MiB alignment
-  cascade. Current MD+ flavours remain unchanged.
-- Establish the curated no-MD+ stock Bugfixed development reference with
-  `build-stock-bugfixed`, a pinned source policy, strict ROM identity and
-  deterministic binary/source audits. Enable ordinary upstream game fixes while
-  deferring Z80 fixes, music/SFX data fixes, the complete 2P page-flip cluster and
-  Fixed Files. Document the policy and next MD+ integration constraints in
-  `docs/BUGFIXED.md`. Both MD+ flavours remain byte-identical to Production.
-- Introduce a separate Bugfixed build flavour selected with `--bugfixed` or
-  `source-bugfixed`, `rom-bugfixed`, `package-bugfixed` and `all-bugfixed` Make
-  targets. Prepared source, ROM and package outputs coexist with Production;
-  both reuse the pinned dependency and prepared audio. A separate strict
-  verification profile and CI byte-equality check establish the build boundary.
-  Production remains the default hardware-qualified build with unchanged names
-  and compatibility aliases. Bugfixed deliberately produces the same ROM bytes
-  for now; actual bugfixes will be introduced separately.
+- Integrate the frozen curated gameplay policy with Forge MD+ in the Bugfixed
+  flavour. Reuse the authoritative policy, lock its three post-policy hashes,
+  relocate Forge to `$108000` and independently audit the moved pause hooks,
+  loader and Z80 bank switches. Freeze the new 2 MiB ROM at checksum `6B57`,
+  SHA-256 `f80d983bdc44d5d89f3f7556e644a5b0ff5bf6e519ddacf0a3df73d4406449dc`.
+- Verify the full curated 2 MiB baseline outside exact Forge mutations, run all
+  three compiled CPU suites against both layouts, and check deterministic
+  rebuilding and package coexistence. The revised Bugfixed ROM is software-verified
+  and hardware-qualified on MiSTer Mega Drive core `26.06.03`. Production remains
+  the default hardware-qualified build with its exact Stage 5 identity, names
+  and compatibility symlink.
+- Establish the curated no-MD+ `build-stock-bugfixed` reference, including the
+  downstream MCZ right-drill operand correction and its compiled orientation
+  tests. Its source policy, strict identity and exclusions remain frozen during
+  MD+ integration: Z80 fixes, music/SFX data fixes, the complete alternate 2P
+  sprite mechanism and Fixed Files remain deferred.
+- Provide isolated Bugfixed preparation, ROM and package commands selected by
+  `--bugfixed`, sharing the pinned dependency and unchanged prepared audio.
+
+### Fixed
+
+- Correct the unintended vertical-collision side effect of upstream's ARZ
+  Rising Pillar culling fix, exposed by MiSTer playtesting. Retain explicit
+  height and the larger display dimensions; subtract eight only for collision.
+  Guard the curated source transformation and execute compiled regressions at
+  all seven rising heights. The two-byte insertion is absorbed by existing
+  local alignment; Forge placement, Z80 bytes and Production remain unchanged.
+- Rebaseline stock Bugfixed to checksum `FDED`, SHA-256
+  `51263146131fa2dd70b2fa4c4b5701c6eb7d72d6683bf032358163716bf4ac81`,
+  and Bugfixed MD+ to `6B57`, SHA-256
+  `f80d983bdc44d5d89f3f7556e644a5b0ff5bf6e519ddacf0a3df73d4406449dc`.
+  Recalculate the strict curated masked baseline. Preserve the pre-correction
+  full 1P and comprehensive 2P evidence on Mega Drive core `26.06.03` as
+  historical results. Targeted revalidation of the revised exact hash passed
+  in both ARZ acts, with audio/lifecycle checks and an EHZ 2P regression sample;
+  the revised Bugfixed MD+ ROM is now hardware-qualified on the same core.
 
 ### Removed
 

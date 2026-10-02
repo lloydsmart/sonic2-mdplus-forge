@@ -10,11 +10,12 @@ import test_modern
 
 from tools.mdplus_builder import modern
 from tools.mdplus_builder.common import BuildError
+from tools.mdplus_builder.variants import BuildVariant
 
 
 class ModernHandoffStructureTests(unittest.TestCase):
     def transform(self, fixture, filename, hash_name):
-        with patch.object(modern, hash_name, hashlib.sha256(fixture).hexdigest()):
+        with patch.dict(modern.LAYOUT_PROFILES[BuildVariant.PRODUCTION].source_hashes, {filename: hashlib.sha256(fixture).hexdigest()}):
             return modern._prepare_modern_source(fixture, filename).decode()
 
     def test_each_upstream_file_has_its_own_hash_and_exact_patterns(self):
@@ -57,7 +58,7 @@ class ModernHandoffStructureTests(unittest.TestCase):
         self.assertIn('zTracksSaveEnd<>zHybridAck', z80)
         self.assertIn('zHybridAck<>01FF4h', z80)
         self.assertIn('(ForgeModernHandoff>=CrossResetRAM)', asm)
-        self.assertIn('(fixBugs<>0)', asm)
+        self.assertIn('(fixBugs<>ForgeExpectedFixBugs)', asm)
         self.assertEqual(modern.RAM_HANDOFF.count('ForgeModernHandoff: ds.b 1'), 1)
         self.assertNotIn('MDP_', asm)
         self.assertNotIn('ForgeModernDispatch', asm)
