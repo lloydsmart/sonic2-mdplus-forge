@@ -27,6 +27,8 @@ Versioning for its own tooling releases.
   sprite mechanism and Fixed Files remain deferred.
 - Provide isolated Bugfixed preparation, ROM and package commands selected by
   `--bugfixed`, sharing the pinned dependency and unchanged prepared audio.
+- Add GitHub release and license badges to the README alongside the existing CI
+  badge.
 
 ### Fixed
 

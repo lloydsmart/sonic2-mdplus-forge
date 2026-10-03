@@ -1,6 +1,8 @@
 # Sonic 2 MD+ Forge
 
 [![CI](https://github.com/lloydsmart/sonic2-mdplus-forge/actions/workflows/ci.yml/badge.svg)](https://github.com/lloydsmart/sonic2-mdplus-forge/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/lloydsmart/sonic2-mdplus-forge)](https://github.com/lloydsmart/sonic2-mdplus-forge/releases)
+[![License](https://img.shields.io/github/license/lloydsmart/sonic2-mdplus-forge)](LICENSE)
 
 Sonic 2 MD+ Forge is a reproducible build system for creating MD+ variants of
 Sonic the Hedgehog 2 for the Mega Drive. It combines external soundtrack
