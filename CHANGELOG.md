@@ -7,6 +7,41 @@ Versioning for its own tooling releases.
 
 ## [Unreleased]
 
+### Fixed
+
+- Select only Spin Dash Release transpose and Credits PSG pitch corrections for
+  Bugfixed. Neutralise the obsolete Credits compensation without moving data.
+  Keep `FixMusicAndSFXDataBugs` globally disabled; Sky Chase, Death Egg, Z80
+  driver fixes and Fixed Files remain excluded. Production stays byte-identical.
+- Lock pristine and post-policy hashes for both selected inputs; compare complete
+  compiled data with upstream fixed semantics and reconstruct both v3 Bugfixed
+  baselines from the exact three changed operands and header checksums. Freeze
+  the new software-validated identities; the exact Bugfixed MD+ candidate also
+  passed the targeted MiSTer qualification below.
+
+### Changed
+
+- Hardware-qualify the exact post-v3 Bugfixed MD+ candidate on MiSTer FPGA,
+  Mega Drive core `26.06.03`: checksum `6AD6`, MD5
+  `ef060d788f896099075e370195120ff2`, SHA-256
+  `b04c2fd39e804719db599cca014966b19f07b16140688ee265c1dc759cb2212b`.
+  Repeated Spin Dash releases sounded normal across charge lengths, directions
+  and ordinary SFX combinations, with no audible regression. Vanilla driver
+  overflow already masks the malformed `$90` transpose; the source/compiled
+  audit establishes the data correction, without claiming an audible change.
+  Credits playback through the end exercised both corrected PSG2 regions and
+  sounded normal, with no invalid pitch, garbage notes, discontinuity or stuck
+  PSG. Extensive native SFX, both Emerald Hill acts and boss, part of Chemical
+  Plant Act 1, MD+/native coexistence and ownership transitions, invincibility,
+  repeated pause/unpause, the Death Egg music sequence through the ending
+  transition and level select all passed. No hardware regression was observed.
+  Exact binary accounting established only the intended data operands and
+  header checksum changes before this targeted hardware qualification.
+  Retain v3.0.0 `d1668976...` as the released hardware-qualified baseline;
+  these selective audio-data fixes are post-v3. No new full-game playthrough
+  or comprehensive 2P soak is claimed for this candidate. See the
+  [complete hardware results](docs/BUGFIXED.md#targeted-mister-hardware-qualification).
+
 ## [3.0.0] - 2026-10-03
 
 ### Changed

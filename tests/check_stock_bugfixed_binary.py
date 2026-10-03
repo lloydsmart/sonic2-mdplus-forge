@@ -31,8 +31,8 @@ from tools.mdplus_builder.source import _clone_at, _git_output, genesis_checksum
 from tools.mdplus_builder.variants import BuildVariant
 
 # Independent observations from the first controlled build, not verifier constants.
-EXPECTED_IDENTITY = (2_097_152, 'FDEC', '9a0fd894e5fd5e85a354d2578fab7421',
-                     '7e8fe718aea8344dfe32931097977c0661bc0dbc9c41cba60e7b7a5e12be933f')
+EXPECTED_IDENTITY = (2_097_152, 'FD6C', '4cf0dd1f1698c87d2728a071797b1acb',
+                     '869869560951eaad0fc327057e50e8ae3cf4ea04c877ff81e8c22a0b17cc02fa')
 LAYOUT = {
     'PlayMusic': (0x135E, 0x135E), 'PlaySound': (0x1370, 0x1370),
     'PlaySound2': (0x1376, 0x1376), 'sndDriverInput': (0x1084, 0x1084),
@@ -132,7 +132,7 @@ class StockBugfixedBinaryTests(unittest.TestCase):
         self.assertEqual(snapshot(protected), before)
         self.assertNotEqual(BuildVariant.PRODUCTION.rom_path.read_bytes(), BuildVariant.BUGFIXED.rom_path.read_bytes())
 
-    def test_pinned_source_policy_changes_only_three_files(self):
+    def test_pinned_source_policy_changes_only_five_files(self):
         with tempfile.TemporaryDirectory(prefix='audit-curated-', dir=BUILD) as directory:
             work = Path(directory) / 'source'
             _clone_at('', bugfixed.AUDITED_COMMIT, work, modern.SOURCE_MODERN_DIR)
@@ -141,11 +141,13 @@ class StockBugfixedBinaryTests(unittest.TestCase):
             bugfixed.apply_policy(work)
             after = bugfixed.tracked_hashes(work)
             self.assertEqual({name for name in before if before[name] != after[name]},
-                             {'s2.asm', 's2.constants.asm', 's2.sounddriver.asm'})
+                             {'s2.asm', 's2.constants.asm', 's2.sounddriver.asm',
+                              'sound/sfx/BC - Spin Dash Release.asm', 'sound/music/9E - Credits.asm'})
             self.assertEqual(set(before), set(after))
             self.assertEqual(set(_git_output(work, 'diff', '--name-only').splitlines()),
-                             {'s2.asm', 's2.constants.asm', 's2.sounddriver.asm'})
-            # Every normal object/ring file, Fixed Files replacement, sound source,
+                             {'s2.asm', 's2.constants.asm', 's2.sounddriver.asm',
+                              'sound/sfx/BC - Spin Dash Release.asm', 'sound/music/9E - Credits.asm'})
+            # Every normal object/ring file, Fixed Files replacement, unselected sound source,
             # and the separate compressed-music builder is still pristine.
             self.assertTrue(any(name.startswith('Utility Project Files/Fixed Files/') for name in before))
             for name in before.keys() - bugfixed.SOURCE_HASHES.keys():

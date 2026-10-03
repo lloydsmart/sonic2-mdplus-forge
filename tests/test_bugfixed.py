@@ -88,6 +88,36 @@ class CuratedPolicyTests(unittest.TestCase):
             with self.assertRaisesRegex(BuildError, 'source pattern'):
                 self.transform_fixture('s2.constants.asm', text.replace(pattern, '', 1))
 
+    def test_selected_audio_contexts_fail_closed(self):
+        for name, patterns in bugfixed.AUDIO_PATTERNS.items():
+            source = ''.join(old for old, _ in patterns)
+            self.assertEqual(self.transform_fixture(name, source), ''.join(new for _, new in patterns))
+            for old, new in patterns:
+                for wrong in (source.replace(old, '', 1), source + old,
+                              source.replace(old, new, 1), source.replace(old, old + '; unexpected\n', 1)):
+                    with self.subTest(name=name), self.assertRaisesRegex(BuildError, 'source hash changed'):
+                        bugfixed.transform_source(wrong.encode(), name)
+                for wrong in (source.replace(old, '', 1), source + old, source.replace(old, new, 1)):
+                    with self.subTest(name=name), self.assertRaisesRegex(BuildError, 'source pattern'):
+                        self.transform_fixture(name, wrong)
+
+    def test_post_policy_hash_failure_precedes_all_writes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            work = Path(directory)
+            for name in bugfixed.SOURCE_HASHES:
+                path = work / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b'pristine')
+            (work / 'build.lua').write_text('\nFixMusicAndSFXDataBugs = 0\n')
+            hashes = {'build.lua': bugfixed.BUILD_LUA_SHA256}
+            with (patch.object(bugfixed, '_git_output', side_effect=[bugfixed.AUDITED_COMMIT, '']),
+                  patch.object(bugfixed, 'tracked_hashes', return_value=hashes),
+                  patch.object(bugfixed, 'transform_source', return_value=b'wrong output'),
+                  self.assertRaisesRegex(BuildError, 'post-policy hash changed')):
+                bugfixed.apply_policy(work)
+            for name in bugfixed.SOURCE_HASHES:
+                self.assertEqual((work / name).read_bytes(), b'pristine')
+
     def test_obj82_requires_one_pristine_anchor_and_preserves_obj2b(self):
         source = self.main_fixture()
         result = self.transform_fixture('s2.asm', source)

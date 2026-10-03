@@ -91,3 +91,5 @@ jobs:
           PYTHONPATH=. python tests/check_bugfixed_binary.py
       - name: Audit curated stock Bugfixed policy, layout and deterministic isolation
         run: PYTHONPATH=. python tests/check_stock_bugfixed_binary.py
+      - name: Audit selective audio data against v3 and upstream fixed semantics
+        run: PYTHONPATH=. python tests/check_audio_data_binary.py

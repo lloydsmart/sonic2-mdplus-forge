@@ -12,14 +12,192 @@ The maintained builds have distinct policies and verification profiles:
 | Stock Production reference | Untouched pinned REV01 | None |
 | Stock Bugfixed reference | Curated game fixes described here | None |
 | Production MD+ | Pristine retail policy | Hardware-qualified Stage 5 |
-| Bugfixed MD+ | Exact curated policy described here | Hardware-qualified on MiSTer core `26.06.03` |
+| Bugfixed MD+ | Curated policy plus two selected audio-data fixes | Hardware-qualified; targeted post-v3 scope below |
 
 `rom-bugfixed` and its package now integrate curated gameplay fixes with Forge
 MD+. Production remains the default hardware-qualified build with its exact
-Stage 5 identity. **The current Obj82-corrected hash is hardware-qualified on
-MiSTer Mega Drive core `26.06.03` after targeted ARZ testing.** The preceding
+Stage 5 identity. **The released v3 Obj82-corrected hash was hardware-qualified on
+MiSTer Mega Drive core `26.06.03` after targeted ARZ testing. The current
+selective audio `b04c2fd3...` candidate is also hardware-qualified on that core
+for the targeted post-v3 scope below.** The preceding
 Obj2B qualification and earlier broad 1P/2P results remain historical evidence;
 the exact identities, test scope and evidence chain are recorded below.
+
+## Post-v3 selective audio-data candidate
+
+The pinned upstream commit is unchanged. `FixMusicAndSFXDataBugs` remains
+globally disabled in `s2.asm` and the separate `build.lua` compressed-song
+environment. `FixDriverBugs` remains zero. Exactly these two inputs are selected
+through `bugfixed.apply_policy()`; the Forge adapter does not recreate them:
+
+- **Spin Dash Release:** select the upstream fixed FM5 header transpose `$10`
+  instead of `$90`, leaving the entire remaining SFX unchanged. Upstream commit
+  `8914322db1c269f263b77448466288530fd3ed63`, titled
+  "Restored vanilla overflow behaviour to zFMSetFreq", explains that retail
+  overflow hides this malformed transpose. This corrects data; an audible
+  Spin Dash difference with the current driver is not assumed.
+- **Credits:** select positive `$C` at the EHZ 2P PSG2-to-CNZ PSG2 transition
+  (`$D0->$DC`), instead of negative `$C`, preventing invalid frequency-table
+  access. The following `$E8`, call, `$18` and note sequence stay unchanged.
+  Upstream's fixed path omits the later `$C*2` compensation. Forge changes that
+  command's operand to zero: `E9 18 -> E9 00`. The current Z80 handler adds the
+  argument to the transpose and returns, so zero preserves the corrected pitch.
+  Retaining its two-byte width preserves every song/SFX address and pointer.
+
+Sky Chase and Death Egg remain excluded. No Z80 fixes, Fixed Files, alternate
+2P sprite mechanism, level-data polishing, door-data or launcher-data changes
+are introduced. MD+ routes, transactions, WAV conversion and loop points stay
+unchanged. Production remains byte-identical to v3.0.0.
+
+Preparation hash-checks five pristine files, requires every contextual anchor
+exactly once (existing page-flip counts are retained), computes all five outputs
+and checks all five exact post-policy hashes before writing anything. Missing,
+duplicated, unexpected and already-patched inputs fail closed. Every other
+tracked input must remain unchanged. The pristine and post-policy tables below
+include the two new audio files; the previous three hashes are unchanged.
+
+### Compiled evidence and complete v3 diff
+
+`tests/check_audio_data_binary.py` checks both stock Bugfixed and Bugfixed MD+.
+It reconstructs the full v3 images by reversing only the three data operands
+and restoring the old header checksums, then requires the released SHA-256
+identities. No byte outside those exact changes is masked. It also freezes the
+complete parsed v3 symbol maps: 23,349 stock symbols and 23,467 MD+ symbols,
+including all ROM, sound-data, Forge, Z80 and RAM addresses.
+
+| ROM offset | v3 | Candidate | Meaning |
+| --- | --- | --- | --- |
+| `$106712` | `F4` | `0C` | Credits: `E9 F4 -> E9 0C` |
+| `$10674E` | `18` | `00` | Credits: `E9 18 -> E9 00` |
+| `$107449` | `90` | `10` | Spin Dash Release FM5 header transpose |
+| Stock `$00018F` | `EC` | `6C` | Checksum `FDEC -> FD6C` |
+| MD+ `$00018E` | `6B` | `6A` | Checksum high byte |
+| MD+ `$00018F` | `56` | `D6` | Checksum low byte: `6B56 -> 6AD6` |
+
+These are the complete diffs: four stock bytes and five MD+ bytes. Both ROMs
+remain 2,097,152 bytes. All symbol maps are identical to v3; Forge stays at
+`$108000-$1086C0`, sound data ends at `$107FEC`, Z80 banks and RAM do not move.
+Compressed and loaded driver identities remain exactly as recorded below.
+There is no finished-ROM patch or unexplained difference.
+
+Both driver payloads start at `$0ED0E8`, with identical bytes before and after:
+
+- Stock: 3,942 compressed bytes, SHA-256
+  `20f87dc2d04ea396781d1136af4c448be60f8c984adafcb507bc24be81cfd702`;
+  4,872 loaded bytes, SHA-256
+  `bb6d42f875017b434f54ab76d02b476d0efbdc13db23e327d07080cfc84a477f`.
+- MD+: 4,011 compressed bytes, SHA-256
+  `392dd33e5c34d555d993dce0dd33133d36737faa3b6c1e473b3278a75713af33`;
+  4,986 loaded bytes, SHA-256
+  `f2883990453ba7deedc682b3970be0d2c73fea99a566a30d43362c2769ac7041`.
+
+The compressed-region-with-padding MD+ hash remains
+`b9788df25eb06f84bacdb03b620c256a72001c533c08770faa7a93826ef985e1`.
+The eight bankswitch expansions retain their targets and the same 34-byte
+Production-to-Bugfixed relocation audit; this phase adds no Z80 relocation.
+
+Disposable standalone assemblies of pristine upstream Spin Dash/Credits with
+`FixMusicAndSFXDataBugs=1` provide independent compiled references. The Spin
+Dash block `$107441-$107482` is exactly 65 fixed upstream bytes. The Credits
+block `$105797-$106E91` is exactly 5,882 bytes. Its fixed upstream reference is
+two bytes shorter; the test checks every Credits label's resulting two-byte
+shift and all 173 emitted pointers, restores only those pointer addresses and
+inserts `E9 00` at `$10674D`. The entire normalized reference then equals the
+candidate. These reference wrappers are deleted and are not supported variants.
+Both stock and MD+ contain identical complete selected data blocks.
+
+The unchanged compiled `cfChangeTransposition` handler is `DD 86 05 DD 77 05 C9`.
+Z80 execution checks zero adjustment for every possible starting transpose and
+the corrected `$D0 + $0C = $DC`, `$DC + $E8 = $C4`, `$C4 + $18 = $DC` sequence.
+The surrounding Credits bytes are protected by the complete v3 reconstruction
+and upstream-reference equality, including the original call/note sequence.
+
+Excluded complete compressed song blocks retain their exact v3 bytes:
+
+| Song | ROM span (exclusive end) | Bytes | SHA-256 |
+| --- | --- | --- | --- |
+| Sky Chase | `$103A6F-$103D8C` | 797 | `a34c80a453485677040838040f8835cf19b085e7cfbb7aa695018a51bc2e1aa0` |
+| Death Egg | `$10236B-$1026ED` | 898 | `d997397b4a712631bf47cef97466d282072ecbd69d658dc90328ffcc0be97427` |
+
+The audit writes the complete byte accounting to ignored
+`build/selective-audio-diff.json`. Existing stock and MD+ integration audits,
+all three CPU suites for each flavour, and the Production `fixBugs=1` negative
+control remain required. CI runs the new selective compiled-data audit too.
+
+### Exact candidate identities
+
+Both identities have software validation. The Bugfixed MD+ identity also passed
+the targeted MiSTer hardware qualification recorded below.
+
+| Field | Stock Bugfixed | Bugfixed MD+ |
+| --- | --- | --- |
+| Size | `2,097,152` | `2,097,152` |
+| Stored/calculated checksum | `FD6C` | `6AD6` |
+| MD5 | `4cf0dd1f1698c87d2728a071797b1acb` | `ef060d788f896099075e370195120ff2` |
+
+Stock Bugfixed SHA-256:
+`869869560951eaad0fc327057e50e8ae3cf4ea04c877ff81e8c22a0b17cc02fa`.
+Bugfixed MD+ SHA-256:
+`b04c2fd39e804719db599cca014966b19f07b16140688ee265c1dc759cb2212b`.
+
+Production remains checksum `BE41`, MD5 `9eb40c0601a7c424a0d1ce168b5f40f2`,
+SHA-256 `bd12138cd478596e4d294a06f573a98a6d37747dfe58d726ca62cf50dc3a8c44`.
+Historical v3 qualification belongs to `d1668976...`. The new candidate's
+qualification comes from its own targeted hardware results below.
+`docs/releases/v3.0.0.md` is unchanged; v3 did not contain these selective
+audio-data fixes.
+
+### Targeted MiSTer hardware qualification
+
+Lloyd reported successful targeted testing of this exact Bugfixed MD+ candidate
+on **MiSTer FPGA, Mega Drive core `26.06.03`**:
+
+- Stored and calculated checksum: `6AD6`.
+- MD5: `ef060d788f896099075e370195120ff2`.
+- SHA-256: `b04c2fd39e804719db599cca014966b19f07b16140688ee265c1dc759cb2212b`.
+
+The reported hardware results were:
+
+- Repeated Spin Dash release testing passed: multiple Spin Dashes, different
+  charge lengths and movement directions, combined with other ordinary SFX.
+  It sounded normal, with no malformed burst, missing sound, stuck FM channel
+  or other audible regression. The current Sonic 2 sound driver's vanilla
+  overflow behaviour already masks the malformed `$90` transpose, so this
+  result confirms no regression; the source/compiled audit establishes the
+  corrected data. It does not establish an audible change from the correction.
+- Credits was played all the way through to the end, exercising both the
+  corrected PSG2 transition region and the later formerly compensating region.
+  Playback sounded normal throughout, with no invalid pitch, garbage notes,
+  discontinuity or stuck PSG observed.
+- Ordinary native SFX were tested extensively: jump, rings, item boxes,
+  badniks, Spin Dash and normal gameplay effects.
+- Both acts of Emerald Hill were played, including the boss fight, and part of
+  Chemical Plant Act 1 was played. MD+ level playback and native SFX coexistence
+  remained correct.
+- MD+ -> native -> MD+ ownership transitions remained correct. The
+  invincibility round trip passed. Pause/unpause was tested repeatedly and passed.
+- The Death Egg sequence passed: MD+ zone music -> native Metal Sonic boss
+  music -> restoration to MD+ zone music -> native final-boss music -> ending
+  transition.
+- The level-select cheat remained functional.
+
+**No hardware regression was observed. This exact `b04c2fd3...` candidate is now
+hardware-qualified on MiSTer Mega Drive core `26.06.03` for the selective post-v3
+audio-data polish and the targeted scope reported above.**
+
+The selective audio qualification evidence chain is:
+
+1. v3.0.0 Bugfixed `d1668976...` remains the released hardware-qualified baseline.
+2. Post-v3 software work selectively corrects only Spin Dash Release and Credits
+   data through the authoritative policy.
+3. Exact binary accounting establishes only the three intended data operands
+   and header checksum changes: five changed bytes in Bugfixed MD+.
+4. The exact `b04c2fd3...` candidate then passed the targeted hardware scope above.
+5. That exact candidate is now hardware-qualified for the selective post-v3
+   audio-data polish.
+
+This candidate did not undergo a new full-game playthrough or comprehensive 2P
+soak. Earlier broad 1P/2P results remain historical evidence for their exact ROMs.
 
 ## Initial policy
 
@@ -32,10 +210,10 @@ Excluded or deferred:
 
 - **Z80 driver fixes:** generated `s2.sounddriver.asm` sets `FixDriverBugs = 0`.
   Forge's own Stage 4 additions are retained and separately audited below.
-- **Music/SFX data fixes:** generated `s2.asm` sets
+- **Global music/SFX data fixes:** generated `s2.asm` sets
   `FixMusicAndSFXDataBugs = 0`; unchanged, hash-locked `build.lua` also sets it
-  to zero for compressed songs. These separate assembly environments need an
-  explicit audio-data audit.
+  to zero for compressed songs. Only Spin Dash Release and Credits are selected
+  by exact source transformations below. Sky Chase and Death Egg remain excluded.
 - **Complete 2P sprite-table page flip:** `ForgeFix2PSpritePageFlip = 0` gates
   all eleven associated conditionals. Alternate tables consume all of
   `$FFF100-$FFF5FF`, reserved for Forge MD+ state.
@@ -45,8 +223,8 @@ Excluded or deferred:
 
 The no-MD+ reference runs upstream `build.lua` without Forge includes. Bugfixed
 MD+ starts from that exact curated source policy, then applies Forge. Production
-continues to prepare pristine `fixBugs = 0` source. No upstream sound/music
-source data is changed; `FixDriverBugs` and `FixMusicAndSFXDataBugs` remain zero.
+continues to prepare pristine `fixBugs = 0` source. Only the two selected
+sound/music source files change; `FixDriverBugs` and `FixMusicAndSFXDataBugs` remain zero.
 These exclusions cover music/SFX **data**
 fixes and Z80 driver **logic** fixes. Enabled main-game 68000 fixes can still
 change when or how native sound and music requests are queued, restored,
@@ -185,7 +363,7 @@ subtracting from `d2` so both collision values derive from retail `$30`.
 Rendering/culling still uses the stored `$32` radius. Frame zero skips the
 subtraction. Obj82 was discovered through source/compiled analysis, then
 validated on MiSTer after correction. Obj2B was originally discovered from
-observed hardware gameplay behaviour. The targeted current-ROM results below
+observed hardware gameplay behaviour. The targeted released-v3 ROM results below
 qualify the corrected behaviour without claiming a hardware reproduction of
 the preceding Obj82 jumping-height difference.
 
@@ -351,7 +529,7 @@ becomes type 1: standing starts the `$1E`-tick wait, then type 2 falls under
 gravity. Unused property entries 4/6 have no valid mapping and are not test cases.
 There are no frame-zero Obj82 placements in these two object lists.
 
-Repeatable targeted MiSTer checklist for the exact current MD+ SHA-256:
+Repeatable targeted MiSTer checklist for the exact released-v3 MD+ SHA-256:
 
 - Start with Act 2's `$0340-$0540`, Y `$0520` group; compare ordinary jump contact
   and clearance against retail before standing triggers the falling behaviour.
@@ -377,21 +555,24 @@ python3 -m tools.mdplus_builder build-stock-bugfixed
 Both stock references use the same dependency checkout. The dedicated
 `tools/mdplus_builder/bugfixed.py` policy creates a disposable clone of committed
 inputs, checks its exact revision and pristine state, then verifies SHA-256
-before changing these three files:
+before changing these five files:
 
 | Mutated source file | Pristine SHA-256 |
 | --- | --- |
 | `s2.asm` | `448630bb22c08b5281d143438296e5b9045f6539699ec3724147a7f945c938b9` |
 | `s2.constants.asm` | `8de5f4a4e6abc56ea2504afe2f4d58cc8a7a3bfa80e3f3c9f1372231a3ca16cd` |
 | `s2.sounddriver.asm` | `ff34692c633f96d50073c24f6ebb72df5c739892c31be6b19b2ae604e76232c7` |
+| `sound/sfx/BC - Spin Dash Release.asm` | `fbf3022dda86cddabc84b5aad0849e80bdb1ef5bdf600ca83a5db157c0976f94` |
+| `sound/music/9E - Credits.asm` | `df894c3f4a07b3869c6745ece8890500639ccef724d1b0233ecd84b977953914` |
 
 The read-only `build.lua` audit requires SHA-256
 `be0f24531604d40159f7b333f9ee7284d15a096ad6bcc3127808b97a2c136175` and the
 expected zero-valued compressed-song setting. Exact contextual patterns and
 occurrence counts reject unexpected structure even after hash validation.
-All tracked files are hashed before and after preparation; only the three
-listed files may change. The normal Lua build must leave those prepared inputs
-unchanged too. The immutable dependency checkout is never modified.
+All tracked files are hashed before and after preparation; only the five
+listed files may change. All five outputs must match explicit post-policy hashes
+before any write. The three existing curated hashes stay unchanged. The normal
+Lua build must leave those prepared inputs unchanged too. The immutable dependency checkout is never modified.
 
 Run upstream's normal Lua build, including its existing compression, header
 checksum and length finalization. Forge performs no finished-ROM patching.
@@ -409,12 +590,12 @@ The untouched `verify_stock_modern()` audit is unchanged.
 | Field | Stock Bugfixed reference |
 | --- | --- |
 | Size | `2,097,152` bytes |
-| Stored / calculated Mega Drive checksum | `FDEC` / `FDEC` |
-| MD5 | `9a0fd894e5fd5e85a354d2578fab7421` |
-| SHA-256 | `7e8fe718aea8344dfe32931097977c0661bc0dbc9c41cba60e7b7a5e12be933f` |
+| Stored / calculated Mega Drive checksum | `FD6C` / `FD6C` |
+| MD5 | `4cf0dd1f1698c87d2728a071797b1acb` |
+| SHA-256 | `869869560951eaad0fc327057e50e8ae3cf4ea04c877ff81e8c22a0b17cc02fa` |
 
-The corrected MCZ and ARZ source established these revised constants. Rebuilding from a
-pristine clone after freezing them, then deleting and recreating the published
+The curated gameplay policy plus selected audio data establish these constants.
+Rebuilding from a pristine clone after freezing them, then deleting and recreating the published
 output, reproduced the exact ROM. An independent clean Linux copy fetched the
 pinned source afresh and reproduced all four ROMs byte-for-byte. The policy
 does not adjust padding to obtain a desired identity.
@@ -534,6 +715,8 @@ Production's existing constants remain compatibility aliases.
 | `s2.asm` | `a5e234708be87f5b984d05f6bd4596a28ee792e210822cacd8ed346a9ea8f61f` |
 | `s2.constants.asm` | `e6fac75b24da9ecbd2a11ab7d474a3fe1426afa134ef41d9170202f95e77ac54` |
 | `s2.sounddriver.asm` | `ce96d9dda766fefa33de23ddccea373b58aceb92ec2a91fba30d998105d667a8` |
+| `sound/sfx/BC - Spin Dash Release.asm` | `e405419ccfe906a004c02f8f1ca5e4a56eef68b7315f227b6e25bab029be944a` |
+| `sound/music/9E - Credits.asm` | `16a3c7b4e515bbbfc16eb85727dd63d9ff31977b1fb6fcac5868eead1d657843` |
 
 Each adapter accepts only its selected profile's hashes. The Bugfixed generated
 include requires `fixBugs=1`, `ForgeFix2PSpritePageFlip=0`, `FixDriverBugs=0`
@@ -642,7 +825,7 @@ bytes. Its exact curated original footprint is:
 ```
 
 The compressed-length word at `$0ED050` changes from `0f66` (3,942) to `0fab`
-(4,011). The checksum word changes from `FDEC` to `6B56`; the header ROM end
+(4,011). The checksum word changes from `FD6C` to `6AD6`; the header ROM end
 remains `$001FFFFF`. All other loader bytes remain curated-reference-identical.
 
 ### Forge Z80 identity and complete relocation audit
@@ -694,24 +877,24 @@ loaded driver hashes, exact backend transactions, handoff digest plus callback,
 and router/routine digests. It requires zero padding after Forge.
 
 The full 2 MiB stock reference with those same spans zeroed hashes to
-`66d560a1698458738f98226f8e1460ba80724b0241cb7fab54777ec2e57ca71e`.
+`d2213ab11b2010e5fdde06fb797fa092e6104bc0ea338700964f57f409d86cec`.
 The compiled audit also restores actual stock bytes and reproduces the complete
 unmasked curated SHA-256
-`7e8fe718aea8344dfe32931097977c0661bc0dbc9c41cba60e7b7a5e12be933f`.
+`869869560951eaad0fc327057e50e8ae3cf4ea04c877ff81e8c22a0b17cc02fa`.
 No broad trailing region or gameplay range is ignored. Mutation tests repair
 the header checksum and still require rejection outside and inside these spans.
 
 Bugfixed MD+ identity:
 
 - Size: `2,097,152` bytes.
-- Stored and calculated checksum: `6B56`.
-- MD5: `517f2be577e365296e900cfc04a77782`.
-- SHA-256: `d16689760d3c913ff795c7f3b1c3c98b8ad789fb95efdbd50efaa4cd7f95f621`.
+- Stored and calculated checksum: `6AD6`.
+- MD5: `ef060d788f896099075e370195120ff2`.
+- SHA-256: `b04c2fd39e804719db599cca014966b19f07b16140688ee265c1dc759cb2212b`.
 
 The first controlled build and a rebuild from deleted prepared/ROM output
 reproduce this identity. Production remains at checksum `BE41` and SHA-256
 `bd12138cd478596e4d294a06f573a98a6d37747dfe58d726ca62cf50dc3a8c44`.
-Stock Bugfixed remains at checksum `FDEC` and its frozen identity above.
+Stock Bugfixed remains at checksum `FD6C` and its frozen identity above.
 
 Both variants retain exactly 21 adjacent open/write/close transactions: 42
 `$0003F7FA` signatures, 21 `$0003F7FE` signatures, 21 opens and 21 closes.
@@ -734,7 +917,7 @@ The **pre-correction** Bugfixed MD+ ROM was tested on Mega Drive core
 `26.06.03`: 2,097,152 bytes, checksum `6886`, MD5
 `2a3f1072c77082b5f3aa80634e4cdd90`, SHA-256
 `8101cf55fcd20ee573be524b1e5e05f5aaecc31560832ffdc136543a5d8e26d6`.
-This is historical evidence, not the current qualified identity. The old stock
+This is historical evidence, not the released-v3 qualified identity. The old stock
 Bugfixed reference was checksum `FB1C`, MD5 `3481d68b32dce3b0a01d291eea49c460`,
 SHA-256 `80be4afa7b11141dfdf7a36ac3ba4af24c71985dda77b8a6a46f9ae1745b4404`.
 Both old Bugfixed identities are superseded by the ARZ policy correction.
@@ -788,9 +971,9 @@ correction, software proof that unrelated integration machinery stayed
 unchanged, and successful targeted hardware revalidation of the revised hash.
 The pre-correction `8101cf55...` ROM remains historical evidence. Neither that
 hash nor the preceding `f80d983b...` qualification is substituted for the
-current exact identity's targeted results below.
+released v3 identity's targeted results below.
 
-#### Current Obj82 hardware qualification
+#### Released v3 Obj82 hardware qualification
 
 Lloyd reported successful targeted ARZ testing of this exact Bugfixed MD+ ROM
 on **MiSTer FPGA, Mega Drive core `26.06.03`**:
@@ -814,7 +997,7 @@ The reported hardware results were:
   MD+ -> invincibility -> MD+ transition/recovery; Act 2 transition to boss
   music; and boss music -> ARZ MD+ restoration.
 
-**No hardware regression was observed. This exact `d1668976...` hash is now
+**No hardware regression was observed. This exact `d1668976...` released v3 hash is
 hardware-qualified on MiSTer Mega Drive core `26.06.03`.** The source and
 compiled tests establish retained display/culling radius `$32`, jumping
 collision `d2=$30` and walking collision `d3=$31`; upstream previously passed
@@ -833,9 +1016,9 @@ The qualification evidence chain is:
 5. The size-neutral Obj82 correction restored both retail collision inputs;
    software audits established unchanged unrelated integration behaviour.
 6. The exact `d1668976...` hash passed the targeted ARZ tests reported above.
-7. The current exact hash is hardware-qualified on that evidence chain.
+7. The released v3 exact hash is hardware-qualified on that evidence chain.
 
-The current hash did not undergo another full 1P playthrough or comprehensive
+The released v3 hash did not undergo another full 1P playthrough or comprehensive
 2P soak. Those broader results remain evidence from the earlier exact ROM;
-the current-ROM hardware evidence is the targeted ARZ and audio/lifecycle scope
+the v3-ROM hardware evidence is the targeted ARZ and audio/lifecycle scope
 reported here.
