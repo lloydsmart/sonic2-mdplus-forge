@@ -37,8 +37,10 @@ verified. All 16 Addryu cues and the manifest loops retain their earlier
 hardware verification. The optional missing-WAV robustness test was not run.
 
 The current production build and package commands use that exact hardware-tested
-ROM. Version 2.0.0 makes it the default while preserving its game and audio
-behavior. Production remains the default and hardware-qualified build.
+ROM. Version 2.0.0 made it the default while preserving its game and audio
+behavior. Version 3.0.0 retires the public legacy fallback interfaces and freezes
+the validated Production and Bugfixed flavours. Production remains the default
+and hardware-qualified build. See the [v3.0.0 release record](docs/releases/v3.0.0.md).
 
 Bugfixed integrates the frozen [curated source policy](docs/BUGFIXED.md) with
 Forge MD+, using isolated outputs and its own audited ROM identity and layout.
@@ -324,7 +326,7 @@ The production build and packaging enforce the exact Stage 5 identity:
 - 21 complete MD+ command transactions; unchanged Stage 3 backend and Stage 4 Z80
 
 `verify-rom` defaults to Production; `--bugfixed` selects its independent
-profile, currently requiring the same exact bytes. Strict verification and
+profile and exact Bugfixed identity documented above. Strict verification and
 packaging reject stock ROMs and ROMs from earlier implementations.
 
 ## Adding tracks and loop points

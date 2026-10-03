@@ -7,6 +7,15 @@ Versioning for its own tooling releases.
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-10-03
+
+### Changed
+
+- Freeze the validated Production and curated Bugfixed flavours for v3.0.0.
+  Removing the public `--legacy` and `*-legacy` interfaces from v2.0.0 is a
+  breaking tooling change under Semantic Versioning, requiring a major release.
+  Production retains its exact hardware-qualified Stage 5 ROM and audio policy.
+
 ### Added
 
 - Integrate the frozen curated gameplay policy with Forge MD+ in the Bugfixed
@@ -16,10 +25,10 @@ Versioning for its own tooling releases.
   SHA-256 `f80d983bdc44d5d89f3f7556e644a5b0ff5bf6e519ddacf0a3df73d4406449dc`.
 - Verify the full curated 2 MiB baseline outside exact Forge mutations, run all
   three compiled CPU suites against both layouts, and check deterministic
-  rebuilding and package coexistence. The preceding Obj2B-corrected Bugfixed ROM was software-verified
-  and hardware-qualified on MiSTer Mega Drive core `26.06.03`. Production remains
-  the default hardware-qualified build with its exact Stage 5 identity, names
-  and compatibility symlink.
+  rebuilding and package coexistence. The preceding Obj2B-corrected Bugfixed ROM
+  was software-verified and hardware-qualified on MiSTer Mega Drive core
+  `26.06.03`. Production remains the default hardware-qualified build with its
+  exact Stage 5 identity, names and compatibility symlink.
 - Establish the curated no-MD+ `build-stock-bugfixed` reference, including the
   downstream MCZ right-drill operand correction and its compiled orientation
   tests. Its source policy, strict identity and exclusions remain frozen during
@@ -70,14 +79,16 @@ Versioning for its own tooling releases.
   full 1P and comprehensive 2P evidence on Mega Drive core `26.06.03` as
   historical results. Targeted revalidation of the revised exact hash passed
   in both ARZ acts, with audio/lifecycle checks and an EHZ 2P regression sample;
-  the preceding Obj2B-corrected Bugfixed MD+ ROM was hardware-qualified on that core.
+  the preceding Obj2B-corrected Bugfixed MD+ ROM was hardware-qualified on that
+  core.
 
 ### Removed
 
 - Retire the `msu-md-sonic2` / separately built ASL fallback, its dependency
   pins, `--legacy` selection, legacy-only options and `*-legacy` Make targets.
   Remove its source converter, ASM helpers, ROM verifier and exclusive tests.
-  CI now validates only stock upstream and the production implementation.
+  At retirement, CI validated only stock upstream and the production
+  implementation; it now also verifies both curated Bugfixed references.
 - Preserve the production commands, compatibility aliases, strict checks and
   byte-identical hardware-tested Stage 5 ROM. Earlier implementations remain
   available in Git history and the existing `v2.0.0` tag.
