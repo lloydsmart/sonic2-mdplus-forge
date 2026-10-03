@@ -15,13 +15,16 @@ or generated MiSTer packages.
 - Production is the default, hardware-qualified flavour. Keep its exact Stage 5
   identity and compatibility symlink unchanged. Bugfixed integrates the frozen
   curated policy in `docs/BUGFIXED.md` with Forge MD+ and has its own strict
-  identity, layout and isolated prepared, ROM and package outputs. It is
-  hardware-qualified on MiSTer Mega Drive core `26.06.03` after targeted Obj82
-  testing. Reuse `apply_policy`;
+  identity, layout and isolated prepared, ROM and package outputs. The released
+  v3 identity is hardware-qualified on MiSTer Mega Drive core `26.06.03` after
+  targeted Obj82 testing. The exact post-v3 selective audio `b04c2fd3...` candidate
+  is hardware-qualified on the same core for the targeted scope in `docs/BUGFIXED.md`.
+  Reuse `apply_policy`;
   do not reconstruct or change the curated policy inside the Forge adapter. Keep Z80
-  and music/SFX data fixes off, exclude Fixed Files and the complete alternate
-  2P sprite mechanism, and preserve the `$FFF100-$FFF5FF` RAM hole and Forge
-  allocations. Audit layout changes independently for both variants.
+  fixes and global music/SFX fixes off; select only Spin Dash Release and Credits
+  data corrections through the authoritative policy. Exclude Fixed Files and the
+  complete alternate 2P sprite mechanism, and preserve the `$FFF100-$FFF5FF` RAM
+  hole and Forge allocations. Audit layout changes independently for both variants.
 - Do not guess loop points. New default-manifest loops require listening tests
   and MiSTer verification across multiple repetitions.
 - Preserve the delayed MD+ overlay activation; opening it before Sonic's

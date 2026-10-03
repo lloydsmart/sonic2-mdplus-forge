@@ -18,8 +18,8 @@ from tools.mdplus_builder.variants import BuildVariant
 
 PRODUCTION, BUGFIXED = BuildVariant
 # Observed from the controlled first build; independently reproduced from pristine inputs.
-IDENTITY = (2_097_152, '6B56', '517f2be577e365296e900cfc04a77782',
-            'd16689760d3c913ff795c7f3b1c3c98b8ad789fb95efdbd50efaa4cd7f95f621')
+IDENTITY = (2_097_152, '6AD6', 'ef060d788f896099075e370195120ff2',
+            'b04c2fd39e804719db599cca014966b19f07b16140688ee265c1dc759cb2212b')
 # Complete 15-byte expansions, in source order; all eight source operands audited.
 BANK_SWITCHES = {0x9C: 'SoundIndex', 0xD4: 'SndDAC_Start', 0x62E: 'SoundIndex',
                  0x701: 'Snd_Sega', 0x982: 'SoundIndex', 0xC76: 'MusicPoint1',
@@ -147,7 +147,7 @@ class BugfixedBinaryTests(unittest.TestCase):
             work = Path(directory) / 'source'
             source._clone_at('', bugfixed.AUDITED_COMMIT, work, modern.SOURCE_MODERN_DIR)
             bugfixed.apply_policy(work)
-            for name in bugfixed.SOURCE_HASHES:
+            for name in self.layout.source_hashes:
                 curated = (work / name).read_bytes()
                 self.assertEqual(hashlib.sha256(curated).hexdigest(), self.layout.source_hashes[name])
                 with patch.dict(modern.LAYOUT_PROFILES, {BUGFIXED: replace(
@@ -162,6 +162,10 @@ class BugfixedBinaryTests(unittest.TestCase):
                 for data, variant in ((curated, PRODUCTION), (pristine, BUGFIXED), (curated + b'\n', BUGFIXED)):
                     with self.assertRaises(BuildError):
                         modern._prepare_modern_source(data, name, variant=variant)
+            for name in bugfixed.AUDIO_PATTERNS:
+                self.assertEqual((work / name).read_bytes(), (BUGFIXED.prepared_dir / name).read_bytes())
+                self.assertEqual((modern.SOURCE_MODERN_DIR / name).read_bytes(),
+                                 (PRODUCTION.prepared_dir / name).read_bytes())
             main = (BUGFIXED.prepared_dir / 's2.asm').read_text()
             self.assertIn(bugfixed.MCZ_RIGHT_DRILL_FIXED, main)
             for name, value in (('fixBugs', 1), ('ForgeFix2PSpritePageFlip', 0),
