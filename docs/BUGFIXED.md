@@ -14,25 +14,26 @@ The maintained builds have distinct policies and verification profiles:
 | Production MD+ | Pristine retail policy | Hardware-qualified Stage 5 |
 | Bugfixed MD+ | Curated policy, selective audio and three level layouts | Hardware-qualified; targeted scope below |
 
-`rom-bugfixed` and its package now integrate curated gameplay fixes with Forge
+`rom-bugfixed` and its package integrate curated gameplay fixes with Forge
 MD+. Production remains the default hardware-qualified build with its exact
-Stage 5 identity. **The released v3 Obj82-corrected hash was hardware-qualified on
-MiSTer Mega Drive core `26.06.03` after targeted ARZ testing. The pre-level-data
-selective audio `b04c2fd3...` candidate is also hardware-qualified on that core
-for the targeted post-v3 scope below. The exact level-data `f33a1946...` candidate
-has now passed its own targeted qualification on the same core.** The preceding
-Obj2B qualification and earlier broad 1P/2P results remain historical evidence;
-the exact identities, test scope and evidence chain are recorded below.
+Stage 5 identity. **The released v3.0.1 Bugfixed identity `C145` / `f33a1946...`
+is hardware-qualified on MiSTer Mega Drive core `26.06.03` for the targeted
+level-data and regression sanity scope below.** The v3.0.0 Obj82-corrected
+`d1668976...` and intermediate selective-audio `b04c2fd3...` identities retain
+their own targeted qualification on that core. The preceding Obj2B qualification
+and earlier broad 1P/2P results remain historical evidence for their exact ROMs.
+See the [v3.0.1 release record](releases/v3.0.1.md) for release-preparation evidence.
 
-## Post-v3 selective level-data candidate
+## Released v3.0.1 selective level data
 
-This development candidate adds only the three approved EHZ2 placements, the
-ARZ2 progression pathswapper and the WFZ1 conveyor correction. The exact
-`b04c2fd3...` audio-polish candidate remains the hardware-qualified pre-level-data
-baseline. **The exact level-data `f33a1946...` candidate is software-validated
-and hardware-qualified on MiSTer Mega Drive core `26.06.03` for the selected
-level-data changes and regression sanity scope recorded below.** Neither the
-pin nor Production changes.
+Version 3.0.1 freezes the post-v3 selective audio and level-data work. The level
+changes add only the three approved EHZ2 placements, the ARZ2 progression
+pathswapper with its bubble generator retained, and the WFZ1 conveyor correction.
+The exact `b04c2fd3...` audio-polish candidate remains the historical
+hardware-qualified pre-level-data baseline. **The released `f33a1946...` identity
+is software-validated and hardware-qualified on MiSTer Mega Drive core `26.06.03`
+for the selected level-data changes and regression sanity scope recorded below.**
+Neither the pin nor Production changes.
 
 ### Provenance and exact selected semantics
 
@@ -220,7 +221,7 @@ end `$1086C0`; final sound end remains `$107FEC`. All hooks and RAM allocations
 remain fixed. Only Bugfixed identities and its exact masked-stock digest change.
 The latter is `1e8d2df3382042f15102491dbfa622e5f3ccd3f47f865af83f8c1a69930b87ad`.
 
-### Current identities and software validation
+### Released v3.0.1 identities and software validation
 
 | Build | Size | Checksum | MD5 |
 | --- | --- | --- | --- |
@@ -376,13 +377,13 @@ The WFZ result is for **object `$72`, the diagonal conveyor**, not the later
 vertical platform/conveyor machinery. ARZ2's upstream bubble-generator removal
 is deliberately excluded; this test confirms the retained generator's behaviour.
 
-Regression sanity on the same exact candidate also passed: native SFX over MD+
+Regression sanity on the same exact ROM also passed: native SFX over MD+
 music, pause/unpause, MD+ -> temporary native music -> MD+ restoration, and reset.
 No obvious object corruption was observed.
 
 **No hardware regression was observed in the targeted scope. This exact
-`f33a1946...` candidate is now hardware-qualified on MiSTer Mega Drive core
-`26.06.03` for the selected level-data changes and checks reported above.**
+`f33a1946...` released v3.0.1 identity is hardware-qualified on MiSTer Mega Drive
+core `26.06.03` for the selected level-data changes and checks reported above.**
 
 The additional qualification evidence chain is:
 
@@ -405,6 +406,11 @@ unselected substitution remain excluded.
 
 ## Post-v3 selective audio-data candidate
 
+This section records the historical intermediate selective-audio stage. Its
+`6AD6` / `b04c2fd3...` identity precedes the level-data changes; the final released
+v3.0.1 Bugfixed identity is `C145` / `f33a1946...` above. The audio corrections
+described here remain selected in v3.0.1.
+
 The pinned upstream commit is unchanged. `FixMusicAndSFXDataBugs` remains
 globally disabled in `s2.asm` and the separate `build.lua` compressed-song
 environment. `FixDriverBugs` remains zero. Exactly these two inputs are selected
@@ -424,10 +430,10 @@ through `bugfixed.apply_policy()`; the Forge adapter does not recreate them:
   argument to the transpose and returns, so zero preserves the corrected pitch.
   Retaining its two-byte width preserves every song/SFX address and pointer.
 
-Sky Chase and Death Egg remain excluded. No Z80 fixes, Fixed Files, alternate
-2P sprite mechanism, level-data polishing, door-data or launcher-data changes
-are introduced. MD+ routes, transactions, WAV conversion and loop points stay
-unchanged. Production remains byte-identical to v3.0.0.
+At this intermediate stage, Sky Chase and Death Egg remained excluded. No Z80
+fixes, Fixed Files, alternate 2P sprite mechanism, level-data polishing, door-data
+or launcher-data changes were introduced. MD+ routes, transactions, WAV
+conversion and loop points stay unchanged. Production remains byte-identical to v3.0.0.
 
 Preparation hash-checks five pristine files, requires every contextual anchor
 exactly once (existing page-flip counts are retained), computes all five outputs
@@ -522,8 +528,8 @@ Bugfixed MD+ SHA-256:
 
 Production remains checksum `BE41`, MD5 `9eb40c0601a7c424a0d1ce168b5f40f2`,
 SHA-256 `bd12138cd478596e4d294a06f573a98a6d37747dfe58d726ca62cf50dc3a8c44`.
-Historical v3 qualification belongs to `d1668976...`. The new candidate's
-qualification comes from its own targeted hardware results below.
+Historical v3.0.0 qualification belongs to `d1668976...`. This intermediate
+candidate's qualification comes from its own targeted hardware results below.
 `docs/releases/v3.0.0.md` is unchanged; v3 did not contain these selective
 audio-data fixes.
 
@@ -567,7 +573,8 @@ audio-data polish and the targeted scope reported above.**
 
 The selective audio qualification evidence chain is:
 
-1. v3.0.0 Bugfixed `d1668976...` remains the released hardware-qualified baseline.
+1. v3.0.0 Bugfixed `d1668976...` remains the historical released
+   hardware-qualified baseline.
 2. Post-v3 software work selectively corrects only Spin Dash Release and Credits
    data through the authoritative policy.
 3. Exact binary accounting establishes only the three intended data operands
@@ -708,7 +715,7 @@ regions, loaded identities and 34-byte bankswitch analysis remain unchanged.
 The research-only sections above review the deferred CPZ/DEZ runtime workaround
 and OOZ spring corrections. Doors use `$02` in the actual Fixed Files; the runtime
 forces `$03`. The OOZ guard and the Obj45 data corrections are not equivalent.
-Neither deferred change is part of this level-data candidate.
+Neither deferred change is part of v3.0.1.
 
 ### Complete 2P exclusion
 

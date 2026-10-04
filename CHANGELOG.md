@@ -7,6 +7,8 @@ Versioning for its own tooling releases.
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-10-04
+
 ### Fixed
 
 - Derive selected level-object records from hash-checked pinned Fixed Files at
@@ -22,9 +24,9 @@ Versioning for its own tooling releases.
   symbol values. Existing alignment absorbs 24 added object bytes; sound, Z80,
   Forge, RAM and Production remain unchanged. Freeze stock Bugfixed at `53DB` /
   `9ff0b7b5...` and Bugfixed MD+ at `C145` / `f33a1946...` after software and clean
-  Linux validation. The exact MD+ candidate passed targeted MiSTer qualification;
-  preserve the exact
-  `b04c2fd3...` selective-audio candidate as the qualified pre-level baseline.
+  Linux validation. The released v3.0.1 MD+ identity passed targeted MiSTer
+  qualification; preserve the exact `b04c2fd3...` selective-audio candidate as
+  the qualified pre-level baseline.
 - Select only Spin Dash Release transpose and Credits PSG pitch corrections for
   Bugfixed. Neutralise the obsolete Credits compensation without moving data.
   Keep `FixMusicAndSFXDataBugs` globally disabled; Sky Chase, Death Egg, Z80
@@ -33,16 +35,21 @@ Versioning for its own tooling releases.
 - Lock pristine and post-policy hashes for both selected inputs; compare complete
   compiled data with upstream fixed semantics and reconstruct both v3 Bugfixed
   baselines from the exact three changed operands and header checksums. Freeze
-  the new software-validated identities; the exact Bugfixed MD+ candidate also
-  passed the targeted MiSTer qualification below.
+  the intermediate selective-audio identities; that exact Bugfixed MD+ candidate
+  also passed the targeted MiSTer qualification below.
 
 ### Changed
 
+- Prepare v3.0.1 as a patch release of the tooling/public interface: no public
+  command/API removal, incompatible change or new public feature. Synchronise
+  package/runtime version metadata and correct stale `--bugfixed` help wording.
+  Production retains its exact Stage 5 identity. See the
+  [v3.0.1 release record](docs/releases/v3.0.1.md).
 - Document research-only door and OOZ2 findings: actual door references select
   `$02`, contrary to the runtime `$03` comment; the two OOZ2 corrections affect
   Obj45 push springs, not Obj48 ball launchers. Keep both deferred.
-- Hardware-qualify the exact Level Data Test Bugfixed MD+ candidate on MiSTer
-  FPGA, Mega Drive core `26.06.03`: checksum `C145`, MD5
+- Release the exact hardware-qualified Level Data Test Bugfixed MD+ identity
+  tested on MiSTer FPGA, Mega Drive core `26.06.03`: checksum `C145`, MD5
   `50e81d88e257f8d14608e57801b628c5`, SHA-256
   `f33a1946a609b8045bb56ffce2aba05196190965fed6ddf5f8eb3b80c52a0c52`.
   All three selected EHZ2 fixes and boss/capsule progression, ARZ2 pathswapper
@@ -71,9 +78,10 @@ Versioning for its own tooling releases.
   transition and level select all passed. No hardware regression was observed.
   Exact binary accounting established only the intended data operands and
   header checksum changes before this targeted hardware qualification.
-  Retain v3.0.0 `d1668976...` as the released hardware-qualified baseline;
-  these selective audio-data fixes are post-v3. No new full-game playthrough
-  or comprehensive 2P soak is claimed for this candidate. See the
+  Retain v3.0.0 `d1668976...` as the historical released hardware-qualified
+  baseline; these selective audio-data fixes are included in v3.0.1. No new
+  full-game playthrough or comprehensive 2P soak is claimed for this candidate.
+  See the
   [complete hardware results](docs/BUGFIXED.md#targeted-mister-hardware-qualification).
 
 ## [3.0.0] - 2026-10-03

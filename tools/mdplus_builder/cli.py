@@ -55,7 +55,7 @@ def _add_variant(command: argparse.ArgumentParser) -> None:
     command.add_argument(
         "--bugfixed", dest="variant", action="store_const", const=BuildVariant.BUGFIXED,
         default=BuildVariant.PRODUCTION,
-        help="select the Bugfixed flavour (currently byte-identical to Production)",
+        help="select the Bugfixed flavour with curated game and data corrections",
     )
 
 
