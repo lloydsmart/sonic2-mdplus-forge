@@ -16,24 +16,26 @@ or generated MiSTer packages.
   identity and compatibility symlink unchanged. Bugfixed integrates the frozen
   curated policy in `docs/BUGFIXED.md` with Forge MD+ and has its own strict
   identity, layout and isolated prepared, ROM and package outputs. The released
-  v3 identity is hardware-qualified on MiSTer Mega Drive core `26.06.03` after
-  targeted Obj82 testing. The exact post-v3 selective audio `b04c2fd3...` candidate
-  is hardware-qualified on the same core for the targeted scope in `docs/BUGFIXED.md`.
-  Reuse `apply_policy`;
-  do not reconstruct or change the curated policy inside the Forge adapter. Keep Z80
-  fixes and global music/SFX fixes off; select only Spin Dash Release and Credits
-  data corrections through the authoritative policy. Select only the audited EHZ2,
-  selective ARZ2 (retaining its bubble generator) and WFZ1 object corrections
-  from pinned Fixed Files references. The post-v3.0.1 door candidate also selects
-  all nine CPZ1/CPZ2/DEZ1 `$02` replacements atomically with retirement of both
-  Obj2D runtime `$03` stores. Derive records from the pinned references; never
-  vendor placement payloads. The exact `e9f56f0e...` candidate is hardware-qualified
-  on MiSTer Mega Drive core `26.06.03` for the targeted door-data/runtime-workaround
-  scope and regression sanity in `docs/BUGFIXED.md`. Exclude all other Fixed Files and the
-  complete alternate 2P sprite mechanism. The exact level-data `f33a1946...`
-  candidate is hardware-qualified on the same core for the targeted scope in
-  `docs/BUGFIXED.md`. Preserve the `$FFF100-$FFF5FF` RAM
-  hole and Forge allocations. Audit layout changes independently for both variants.
+  v3.0.2 baseline is frozen: stock Bugfixed checksum `9BE7`, SHA-256
+  `909e5f229fc4052f3c3c3c9a97c3a6b345117990796b0226dffbc98f88f00bc7`;
+  Bugfixed MD+ checksum `0951`, SHA-256
+  `e9f56f0efd72844918918f2efdecf6183f5bdabb47f235b61cc511a16942d3b5`.
+  The exact MD+ identity is hardware-qualified on MiSTer Mega Drive core
+  `26.06.03` for the targeted door-data/runtime-workaround scope and regression
+  sanity in `docs/BUGFIXED.md`. Historical v3.0.0, selective-audio `b04c2fd3...`
+  and v3.0.1 level-data `f33a1946...` qualifications remain tied to their exact
+  identities. Reuse `apply_policy`; do not reconstruct or change the curated
+  policy inside the Forge adapter. Keep Z80 fixes and global music/SFX fixes off;
+  select only Spin Dash Release and Credits data corrections through the
+  authoritative policy. Select only the audited EHZ2, selective ARZ2 (retaining
+  its bubble generator) and WFZ1 object corrections from pinned Fixed Files
+  references, plus all nine CPZ1/CPZ2/DEZ1 `$02` replacements atomically with
+  retirement of both Obj2D runtime `$03` stores. Derive records from the pinned
+  references; never vendor placement payloads. OOZ2 push springs remain excluded
+  and deferred; issue #26 remains unrelated/open. Exclude all other Fixed Files
+  and the complete alternate 2P sprite mechanism. Preserve the
+  `$FFF100-$FFF5FF` RAM hole and Forge allocations. Audit layout changes
+  independently for both variants. Keep historical release documents immutable.
 - Do not guess loop points. New default-manifest loops require listening tests
   and MiSTer verification across multiple repetitions.
 - Preserve the delayed MD+ overlay activation; opening it before Sonic's
