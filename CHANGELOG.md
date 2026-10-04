@@ -9,10 +9,27 @@ Versioning for its own tooling releases.
 
 ### Fixed
 
+- Derive selected level-object records from hash-checked pinned Fixed Files at
+  build time; retain only semantic shape metadata in Forge. Remove copied object
+  payloads from source, tests and documentation, while preserving exact ROM
+  identities and independent complete-ROM reconstruction evidence.
+- Apply only the three approved EHZ2 object insertions, the ARZ2 loop-progression
+  pathswapper and the WFZ1 conveyor subtype correction through the authoritative
+  Bugfixed policy. Retain ARZ2's bubble generator and every other unselected
+  object/ring input. Lock retail, pinned reference and selective target hashes;
+  audit semantic changes and the EHZ2 issue-#111 capsule regression.
+- Account for all 17,041 changed bytes in each Bugfixed ROM and all 25 changed
+  symbol values. Existing alignment absorbs 24 added object bytes; sound, Z80,
+  Forge, RAM and Production remain unchanged. Freeze stock Bugfixed at `53DB` /
+  `9ff0b7b5...` and Bugfixed MD+ at `C145` / `f33a1946...` after software and clean
+  Linux validation. The exact MD+ candidate passed targeted MiSTer qualification;
+  preserve the exact
+  `b04c2fd3...` selective-audio candidate as the qualified pre-level baseline.
 - Select only Spin Dash Release transpose and Credits PSG pitch corrections for
   Bugfixed. Neutralise the obsolete Credits compensation without moving data.
   Keep `FixMusicAndSFXDataBugs` globally disabled; Sky Chase, Death Egg, Z80
-  driver fixes and Fixed Files remain excluded. Production stays byte-identical.
+  driver fixes and, at that pre-level phase, Fixed Files remain excluded.
+  Production stays byte-identical.
 - Lock pristine and post-policy hashes for both selected inputs; compare complete
   compiled data with upstream fixed semantics and reconstruct both v3 Bugfixed
   baselines from the exact three changed operands and header checksums. Freeze
@@ -21,6 +38,23 @@ Versioning for its own tooling releases.
 
 ### Changed
 
+- Document research-only door and OOZ2 findings: actual door references select
+  `$02`, contrary to the runtime `$03` comment; the two OOZ2 corrections affect
+  Obj45 push springs, not Obj48 ball launchers. Keep both deferred.
+- Hardware-qualify the exact Level Data Test Bugfixed MD+ candidate on MiSTer
+  FPGA, Mega Drive core `26.06.03`: checksum `C145`, MD5
+  `50e81d88e257f8d14608e57801b628c5`, SHA-256
+  `f33a1946a609b8045bb56ffce2aba05196190965fed6ddf5f8eb3b80c52a0c52`.
+  All three selected EHZ2 fixes and boss/capsule progression, ARZ2 pathswapper
+  progression from normal and below-loop approaches with its bubble generator
+  retained, and WFZ object `$72` diagonal conveyor transport passed. Native SFX
+  over MD+, pause/unpause, MD+ -> temporary native music -> MD+ restoration and
+  reset passed; no obvious object corruption or hardware regression was observed
+  in the targeted scope. This adds qualification for the selected level-data
+  changes; earlier broad evidence remains tied to its exact ROMs. No new full-game
+  playthrough or comprehensive retest of previous Bugfixed features is claimed.
+  All unselected Fixed Files remain excluded. See the
+  [level-data hardware results](docs/BUGFIXED.md#targeted-level-data-mister-hardware-qualification).
 - Hardware-qualify the exact post-v3 Bugfixed MD+ candidate on MiSTer FPGA,
   Mega Drive core `26.06.03`: checksum `6AD6`, MD5
   `ef060d788f896099075e370195120ff2`, SHA-256

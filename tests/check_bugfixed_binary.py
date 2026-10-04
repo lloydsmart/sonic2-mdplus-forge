@@ -18,8 +18,8 @@ from tools.mdplus_builder.variants import BuildVariant
 
 PRODUCTION, BUGFIXED = BuildVariant
 # Observed from the controlled first build; independently reproduced from pristine inputs.
-IDENTITY = (2_097_152, '6AD6', 'ef060d788f896099075e370195120ff2',
-            'b04c2fd39e804719db599cca014966b19f07b16140688ee265c1dc759cb2212b')
+IDENTITY = (2_097_152, 'C145', '50e81d88e257f8d14608e57801b628c5',
+            'f33a1946a609b8045bb56ffce2aba05196190965fed6ddf5f8eb3b80c52a0c52')
 # Complete 15-byte expansions, in source order; all eight source operands audited.
 BANK_SWITCHES = {0x9C: 'SoundIndex', 0xD4: 'SndDAC_Start', 0x62E: 'SoundIndex',
                  0x701: 'Snd_Sega', 0x982: 'SoundIndex', 0xC76: 'MusicPoint1',
