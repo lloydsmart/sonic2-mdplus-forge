@@ -36,24 +36,27 @@ speed shoes, extra life, warm reset, level select, and Death Egg/ending were
 verified. All 16 Addryu cues and the manifest loops retain their earlier
 hardware verification. The optional missing-WAV robustness test was not run.
 
-The current production build and package commands use that exact hardware-tested
-ROM. Version 2.0.0 made it the default while preserving its game and audio
-behavior. Version 3.0.0 retires the public legacy fallback interfaces and freezes
-the validated Production and Bugfixed flavours. Production remains the default
-and hardware-qualified build. See the [v3.0.0 release record](docs/releases/v3.0.0.md).
+The current release is **v3.0.1**. Production remains the unchanged default,
+using the exact hardware-tested Stage 5 ROM. Version 2.0.0 made it the default;
+v3.0.0 retired the public legacy fallback interfaces. This patch release freezes
+the merged selective Bugfixed corrections without changing the public interface.
+See the [v3.0.1 release record](docs/releases/v3.0.1.md).
 
 Bugfixed integrates the frozen [curated source policy](docs/BUGFIXED.md) with
 Forge MD+, using isolated outputs and its own audited ROM identity and layout.
-The released v3 Obj82-corrected `d1668976...` hash remains hardware-qualified
-after targeted ARZ testing. The exact post-v3 selective audio `b04c2fd3...`
-candidate is also **hardware-qualified on MiSTer Mega Drive core `26.06.03`**
-for its targeted audio and gameplay scope, as the pre-level-data baseline.
-The current level-data `f33a1946...` candidate adds only approved EHZ2, selective
-ARZ2 and WFZ1 object corrections and is **hardware-qualified on MiSTer Mega Drive
-core `26.06.03` for that targeted scope**. Spin Dash Release
-and Credits remain the only selected audio-data fixes; global music/SFX data
-fixes, Z80 driver fixes, the alternate 2P sprite mechanism and all other Fixed
-Files remain excluded.
+The released v3.0.1 Bugfixed identity `C145` / `f33a1946...` adds only Spin
+Dash Release and Credits audio-data corrections plus the selected EHZ2 walls/
+pathswapper, ARZ2 progression pathswapper and WFZ1 diagonal conveyor correction.
+ARZ2's bubble generator is deliberately retained. The exact identity is
+**hardware-qualified on MiSTer Mega Drive core `26.06.03` for the targeted
+level-data and regression sanity scope**; no new full-game 1P playthrough or
+comprehensive 2P soak is claimed.
+
+The v3.0.0 Obj82-corrected `d1668976...` and intermediate selective-audio
+`b04c2fd3...` identities retain their own historical hardware evidence. Global
+music/SFX data fixes, Sky Chase/Death Egg audio-data changes, Z80 driver fixes,
+the alternate 2P sprite mechanism and every other Fixed Files substitution
+remain excluded. CPZ/DEZ door replacements and OOZ2 push springs remain deferred.
 Production retains its exact Stage 5 identity.
 
 ## What the build does
@@ -213,7 +216,7 @@ stays at `$100000`. Each profile checks its own hooks, loader, compressed driver
 and reference baseline. Both preserve the same Forge RAM allocation and all
 21 short-lived MD+ command transactions, activated only after startup checksum.
 
-Current Bugfixed MD+ is 2,097,152 bytes, checksum `C145`, MD5
+Released v3.0.1 Bugfixed MD+ is 2,097,152 bytes, checksum `C145`, MD5
 `50e81d88e257f8d14608e57801b628c5`, SHA-256
 `f33a1946a609b8045bb56ffce2aba05196190965fed6ddf5f8eb3b80c52a0c52`.
 Its approved level-data edits add 24 uncompressed bytes, absorbed by existing
@@ -227,7 +230,8 @@ evidence for the level-data changes; no new full-game playthrough or comprehensi
 retest of previous Bugfixed features is claimed. See the
 [level-data audit and hardware results](docs/BUGFIXED.md#targeted-level-data-mister-hardware-qualification).
 
-The hardware-qualified pre-level-data Bugfixed baseline is checksum `6AD6`, MD5
+The historical hardware-qualified pre-level-data Bugfixed baseline has checksum
+`6AD6`, MD5
 `ef060d788f896099075e370195120ff2`, SHA-256
 `b04c2fd39e804719db599cca014966b19f07b16140688ee265c1dc759cb2212b`.
 This exact post-v3 candidate passed targeted MiSTer hardware qualification on
