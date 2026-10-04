@@ -36,30 +36,30 @@ speed shoes, extra life, warm reset, level select, and Death Egg/ending were
 verified. All 16 Addryu cues and the manifest loops retain their earlier
 hardware verification. The optional missing-WAV robustness test was not run.
 
-The current release is **v3.0.1**. Production remains the unchanged default,
+The current release is **v3.0.2**. Production remains the unchanged default,
 using the exact hardware-tested Stage 5 ROM. Version 2.0.0 made it the default;
 v3.0.0 retired the public legacy fallback interfaces. This patch release freezes
-the merged selective Bugfixed corrections without changing the public interface.
-See the [v3.0.1 release record](docs/releases/v3.0.1.md).
+the merged CPZ/DEZ door corrections without changing the public interface.
+See the [v3.0.2 release record](docs/releases/v3.0.2.md).
 
 Bugfixed integrates the frozen [curated source policy](docs/BUGFIXED.md) with
 Forge MD+, using isolated outputs and its own audited ROM identity and layout.
-The released v3.0.1 Bugfixed identity `C145` / `f33a1946...` adds only Spin
-Dash Release and Credits audio-data corrections plus the selected EHZ2 walls/
-pathswapper, ARZ2 progression pathswapper and WFZ1 diagonal conveyor correction.
-ARZ2's bubble generator is deliberately retained. The exact identity is
+Version 3.0.2 retains v3.0.1's selective Spin Dash Release and Credits audio-data
+corrections, EHZ2 walls/pathswapper, ARZ2 progression pathswapper with its bubble
+generator retained, and WFZ1 diagonal conveyor. It adds all nine CPZ1/CPZ2/DEZ1
+Obj2D `$02` replacements together with retirement of both runtime `$03` stores.
+The exact released `0951` / `e9f56f0e...` Bugfixed MD+ identity is
 **hardware-qualified on MiSTer Mega Drive core `26.06.03` for the targeted
-level-data and regression sanity scope**; no new full-game 1P playthrough or
-comprehensive 2P soak is claimed.
+door-data/runtime-workaround scope and regression sanity**. This is not a new
+full-game 1P playthrough or comprehensive 2P soak.
 
-The v3.0.0 Obj82-corrected `d1668976...` and intermediate selective-audio
-`b04c2fd3...` identities retain their own historical hardware evidence. Global
-music/SFX data fixes, Sky Chase/Death Egg audio-data changes, Z80 driver fixes,
-the alternate 2P sprite mechanism and every other Fixed Files substitution
-remain excluded from those historical identities. The current post-v3.0.1
-`0951` / `e9f56f0e...` door candidate is hardware-qualified on the same core for
-the [targeted door-data/runtime-workaround scope and regression sanity](docs/BUGFIXED.md#targeted-door-data-mister-hardware-qualification).
-OOZ2 push springs remain deferred. Production retains its exact Stage 5 identity.
+The v3.0.0 Obj82-corrected `d1668976...`, intermediate selective-audio
+`b04c2fd3...` and released v3.0.1 level-data `f33a1946...` identities retain their
+own historical hardware evidence. Global music/SFX fixes, Sky Chase/Death Egg
+audio-data changes, Z80 driver fixes, the alternate 2P sprite mechanism and all
+unselected Fixed Files remain excluded. OOZ2 push springs remain deferred;
+Special Stage results issue #26 remains unrelated/open. See the
+[targeted door results and qualification boundary](docs/BUGFIXED.md#targeted-door-data-mister-hardware-qualification).
 
 ## What the build does
 
@@ -218,25 +218,28 @@ stays at `$100000`. Each profile checks its own hooks, loader, compressed driver
 and reference baseline. Both preserve the same Forge RAM allocation and all
 21 short-lived MD+ command transactions, activated only after startup checksum.
 
-The current feature branch builds a **post-v3.0.1 door-data candidate,
-hardware-qualified on MiSTer Mega Drive core `26.06.03` for the targeted
-door-data/runtime-workaround scope and regression sanity**: all nine
+The frozen v3.0.2 Bugfixed MD+ identity is **hardware-qualified on MiSTer Mega
+Drive core `26.06.03` for the targeted door-data/runtime-workaround scope and
+regression sanity**: all nine
 CPZ1/CPZ2/DEZ1 Obj2D subtypes come from pinned Fixed Files as `$02`, and both
 Bugfixed runtime `$03` overrides are removed atomically.
 Bugfixed MD+ is 2,097,152 bytes, stored/calculated checksum `0951`, MD5
 `5d3e5979d3f110d2761da3166b14b7cf`, SHA-256
 `e9f56f0efd72844918918f2efdecf6183f5bdabb47f235b61cc511a16942d3b5`.
-Production, selective audio, prior selected layouts, Forge/Z80/RAM and version
-metadata `3.0.1` remain unchanged. CPZ1 2/2, CPZ2 4/4 and DEZ 3/3 affected doors
-passed; progression through both DEZ bosses and the ending transition succeeded.
+Production, selective audio, prior selected layouts and Forge/Z80/RAM remain
+unchanged; tooling version metadata is `3.0.2`. CPZ1 2/2, CPZ2 4/4 and DEZ 3/3
+affected doors passed; progression through both DEZ bosses and the ending transition succeeded.
 Pause/unpause, MD+ -> native -> MD+ restoration, soft reset and Level Select
 passed, with no sprite/object corruption or targeted hardware regression observed.
 Brief CPZ2 slowdown during an invincibility monitor effect remains a non-blocking
-observation with no established candidate link. See the [door audit](docs/BUGFIXED.md#post-v301-cpzdez-door-candidate)
+observation, plausibly related to additional object load but not proven
+stock-normal or reproduced as a door fault, with no evidence linking it to the
+released identity. See the [door audit](docs/BUGFIXED.md#released-v302-cpzdez-door-data)
 and [hardware results and qualification boundary](docs/BUGFIXED.md#targeted-door-data-mister-hardware-qualification).
 OOZ2 stays deferred; Special Stage results issue #26 remains unrelated and open.
 
-Released v3.0.1 Bugfixed MD+ is 2,097,152 bytes, checksum `C145`, MD5
+The historical released v3.0.1 Bugfixed MD+ baseline is 2,097,152 bytes,
+checksum `C145`, MD5
 `50e81d88e257f8d14608e57801b628c5`, SHA-256
 `f33a1946a609b8045bb56ffce2aba05196190965fed6ddf5f8eb3b80c52a0c52`.
 Its approved level-data edits add 24 uncompressed bytes, absorbed by existing

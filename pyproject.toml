@@ -1,6 +1,6 @@
 [project]
 name = "sonic2-mdplus-forge"
-version = "3.0.1"
+version = "3.0.2"
 description = "Reproducible build system for Sonic the Hedgehog 2 MD+ soundtrack variants"
 requires-python = ">=3.10"
 license = "GPL-3.0-only"

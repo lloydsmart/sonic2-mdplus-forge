@@ -15,7 +15,7 @@ The maintained builds have distinct policies and verification profiles:
 | Bugfixed MD+ | Curated policy, audio and six layouts | Hardware-qualified; targeted door scope below |
 
 `rom-bugfixed` and its package integrate curated gameplay fixes with Forge
-MD+. The exact current door candidate `0951` / `e9f56f0e...` is
+MD+. The exact frozen released v3.0.2 identity `0951` / `e9f56f0e...` is
 **hardware-qualified on MiSTer Mega Drive core `26.06.03` for the targeted
 door-data/runtime-workaround scope and regression sanity below**.
 Production remains the default hardware-qualified build with its exact
@@ -25,12 +25,13 @@ level-data and regression sanity scope below.** The v3.0.0 Obj82-corrected
 `d1668976...` and intermediate selective-audio `b04c2fd3...` identities retain
 their own targeted qualification on that core. The preceding Obj2B qualification
 and earlier broad 1P/2P results remain historical evidence for their exact ROMs.
-See the [v3.0.1 release record](releases/v3.0.1.md) for release-preparation evidence.
+See the [v3.0.2 release record](releases/v3.0.2.md) for current release-preparation
+evidence; the [v3.0.1 record](releases/v3.0.1.md) remains immutable historical evidence.
 
 Historical preparation, identity and Forge-validation sections below retain their
-released pre-door addresses, hashes and test results. The post-v3.0.1 door section
+released pre-door addresses, hashes and test results. The released v3.0.2 door section
 explicitly describes all current changes to those tables; historical evidence is
-not rewritten as candidate evidence.
+not rewritten as v3.0.2 evidence.
 
 ## Released v3.0.1 selective level data
 
@@ -237,7 +238,7 @@ The latter is `1e8d2df3382042f15102491dbfa622e5f3ccd3f47f865af83f8c1a69930b87ad`
 | Bugfixed MD+ | 2,097,152 | `C145` | `50e81d88e257f8d14608e57801b628c5` |
 | Production MD+ | 2,097,152 | `BE41` | `9eb40c0601a7c424a0d1ce168b5f40f2` |
 
-Current SHA-256 identities:
+Historical v3.0.1 SHA-256 identities:
 
 - Stock Bugfixed: `9ff0b7b577de237cf2fe9e13415a943b7d30e228a12b96b851793c95ece7184f`.
 - Bugfixed MD+: `f33a1946a609b8045bb56ffce2aba05196190965fed6ddf5f8eb3b80c52a0c52`.
@@ -270,14 +271,14 @@ passed the same compiled audits. Existing emulator libraries are tooling
 prerequisites, rather than ROM/source inputs. Audio/packaging code and inputs
 did not change; unit tests still exercise synthetic FFmpeg conversions.
 
-## Post-v3.0.1 CPZ/DEZ door candidate
+## Released v3.0.2 CPZ/DEZ door data
 
 This phase adopts the independently confirmed door research as one atomic policy:
 select all nine pinned Fixed Files `$00 -> $02` Obj2D replacements and retire
 both Bugfixed-only runtime `$03` overrides. The exact `0951` / `e9f56f0e...`
-candidate is **hardware-qualified on MiSTer Mega Drive core `26.06.03` for the
-targeted door-data/runtime-workaround scope and regression sanity recorded below**.
-Version metadata stays `3.0.1`; the released identities
+released v3.0.2 identity is **hardware-qualified on MiSTer Mega Drive core
+`26.06.03` for the targeted door-data/runtime-workaround scope and regression
+sanity recorded below**. Version metadata is `3.0.2`; earlier released identities
 and their hardware evidence above remain frozen. OOZ2 remains deferred.
 Issue #26 (intermittent Special Stage results text corruption) remains unrelated
 and open; these tests do not establish any result for that issue.
@@ -337,7 +338,7 @@ The dependency checkout is untouched. The new curated `s2.asm` SHA-256 is
 The movement follows emitted code and the existing alignments, independently
 observed in stock and MD+ listings:
 
-| Region/symbol | Released v3.0.1 | Candidate | Consequence |
+| Region/symbol | Released v3.0.1 | Released v3.0.2 | Consequence |
 | --- | --- | --- | --- |
 | `Obj2D_Init` | `$0118C8` | `$0118C8` | Entry unchanged |
 | Between removed stores | — | — | Surviving instructions move -6 |
@@ -359,7 +360,7 @@ legacy listing parser's address-shaped artifacts. Named movements comprise
 `paddingSoFar` at +12. Three non-address assembly constants and both MD+ hardware-register symbols
 remain unchanged.
 
-`tests/door_data_evidence.py` independently reverses the compiled candidate;
+`tests/door_data_evidence.py` independently reverses the compiled v3.0.2 ROM;
 it imports no forward policy/parser/transformation. It copies every surviving
 byte through seven disjoint movement intervals, checks all new alignment bytes
 are zero, restores the two instructions and nine pinned retail subtypes, and
@@ -371,7 +372,7 @@ unexplained replacement blob is accepted. Checksums are restored and recalculate
 Both full v3.0.1 MD5/SHA-256 identities are recovered exactly: stock `53DB` /
 `9ff0b7b5...`, MD+ `C145` / `f33a1946...`.
 
-Each candidate differs at 808,214 byte positions from its released counterpart,
+Each v3.0.2 ROM differs at 808,214 byte positions from its released counterpart,
 accounted for by the two removals, relocation/corresponding pointers, alignment,
 nine subtype bytes and checksum. The payload-free generated report
 `build/door-data-diff.json` records every fixup site/expression, movement interval
@@ -390,12 +391,12 @@ digest (`87d7102c04607783e2f6b4af02800bb0dd008e9beb1bdbae297a02610198882c`); its
 The `$FFF100-$FFF5FF` hole, Forge
 allocations, delayed overlay activation, routing and 21 transactions are unchanged.
 
-### CPU evidence and candidate identities
+### CPU evidence and released v3.0.2 identities
 
 The seven-test door audit executes actual compiled Obj2D initialization for all
 nine placements in stock and MD+, the reconstructed release and Production.
 Retail `$00` selects frame 0, the wrong four-piece HTZ mapping for these zones;
-v3.0.1 forces `$03` even when given `$02`; the candidate preserves `$02`.
+v3.0.1 forces `$03` even when given `$02`; v3.0.2 preserves `$02`.
 Compiled frames 2 and 3 are identical 18-byte mappings. The remaining object
 state matches after accounting for the deliberate frame/subtype and relocated
 mapping pointer.
@@ -408,13 +409,13 @@ HTZ, both MTZ zone IDs and ARZ retain generic subtype behavior, tested for subty
 0–3 and both horizontal orientations. This establishes software equivalence;
 the harness does not model console bus timing or replace hardware testing.
 
-| Identity | Stock Bugfixed candidate | Bugfixed MD+ candidate |
+| Identity | Stock Bugfixed v3.0.2 | Bugfixed MD+ v3.0.2 |
 | --- | --- | --- |
 | Size | 2,097,152 bytes | 2,097,152 bytes |
 | Stored/calculated checksum | `9BE7` / `9BE7` | `0951` / `0951` |
 | MD5 | `bd93d95a110be99e9eb9bafb3d31806f` | `5d3e5979d3f110d2761da3166b14b7cf` |
 
-Candidate SHA-256 values:
+Frozen v3.0.2 SHA-256 values:
 
 - Stock: `909e5f229fc4052f3c3c3c9a97c3a6b345117990796b0226dffbc98f88f00bc7`.
 - MD+: `e9f56f0efd72844918918f2efdecf6183f5bdabb47f235b61cc511a16942d3b5`.
@@ -422,7 +423,11 @@ Candidate SHA-256 values:
 Production remains `BE41`, MD5 `9eb40c0601a7c424a0d1ce168b5f40f2`, SHA-256
 `bd12138cd478596e4d294a06f573a98a6d37747dfe58d726ca62cf50dc3a8c44`.
 
-### Software validation and clean reproduction
+### Historical door-phase software validation and clean reproduction
+
+The following records pre-release evidence. New v3.0.2 release-preparation
+validation and clean reproduction are recorded independently in the
+[v3.0.2 release record](releases/v3.0.2.md).
 
 Validation passed in the working tree and a disposable Linux copy:
 
@@ -473,8 +478,8 @@ Lloyd reported the following hardware results on MiSTer FPGA, Mega Drive core
 - MD5: `5d3e5979d3f110d2761da3166b14b7cf`.
 - SHA-256: `e9f56f0efd72844918918f2efdecf6183f5bdabb47f235b61cc511a16942d3b5`.
 
-The generated/current candidate matched this complete identity and passed its
-strict verifier before this qualification record was updated.
+The tested door candidate matched this complete identity and passed its strict
+verifier before qualification was recorded; v3.0.2 freezes that exact identity.
 
 | Target | Coverage | Hardware result |
 | --- | --- | --- |
@@ -505,21 +510,22 @@ Regression sanity on the same exact candidate:
 | Sprite/object corruption | None observed |
 
 **Non-blocking CPZ2 observation:** brief slowdown was noticed while an
-invincibility monitor effect was active. It is likely ordinary Mega Drive
-slowdown under additional invincibility/object load, but this is an interpretation,
-not a software-proven stock-normal result. It was not reproduced as a door fault;
-no evidence currently ties it to this candidate. It is not established as a
-hardware regression and supplies no evidence about issue #26, whose status
+invincibility monitor effect was active. Additional object load is a plausible
+explanation, but this is not a proven stock-normal result. It was not reproduced
+as a door fault; no evidence currently ties it to this identity. It is not
+established as a hardware regression and supplies no evidence about issue #26, whose status
 remains unrelated and open.
 
 **No targeted hardware regression was observed. This exact `e9f56f0e...`
-candidate is hardware-qualified on MiSTer Mega Drive core `26.06.03` for the
-targeted door-data/runtime-workaround scope and regression sanity above.**
+released v3.0.2 identity is hardware-qualified on MiSTer Mega Drive core
+`26.06.03` for the targeted door-data/runtime-workaround scope and regression
+sanity above.**
 
 This was not a new complete Sonic 2 playthrough, a comprehensive 2P soak or a
 retest of every Bugfixed feature. It does not hardware-qualify OOZ2 or establish
 any result for issue #26. Earlier v3.0.1 hardware evidence remains attached to
-its exact released identities; version metadata remains `3.0.1`.
+its exact released identities. Release preparation freezes the already qualified
+identity as v3.0.2 and claims no new hardware session.
 
 ### Historical pre-qualification MiSTer checklist
 
@@ -852,6 +858,10 @@ soak. Earlier broad 1P/2P results remain historical evidence for their exact ROM
 
 ## Initial policy
 
+This section retains the historical pre-door policy description. The released
+v3.0.2 door phase above extends the selected layouts from three to six and
+retires both CPZ/DEZ runtime stores; the OOZ runtime guard remains unchanged.
+
 Enable `fixBugs = 1` for ordinary upstream main-game inline corrections,
 including code, objects, rendering, collision, camera and mappings, except for
 the exclusions below. Use the corrected upstream branches directly; do not
@@ -976,10 +986,11 @@ their addresses. Alignment absorbs the insertion before MCZ; the ROM remains
 2 MiB. Stock and MD+ were audited independently. The complete compressed Z80
 regions, loaded identities and 34-byte bankswitch analysis remain unchanged.
 
-The research-only sections above review the deferred CPZ/DEZ runtime workaround
-and OOZ spring corrections. Doors use `$02` in the actual Fixed Files; the runtime
-forces `$03`. The OOZ guard and the Obj45 data corrections are not equivalent.
-Neither deferred change is part of v3.0.1.
+The historical v3.0.1 policy deferred both CPZ/DEZ door-data adoption and OOZ
+spring corrections. Doors use `$02` in the actual Fixed Files; v3.0.1 forced
+`$03` at runtime. v3.0.2 selects the door data and retires both stores as recorded
+above. The OOZ guard and Obj45 data corrections are not equivalent; OOZ2 remains
+deferred. Neither data substitution was part of v3.0.1.
 
 ### Complete 2P exclusion
 
