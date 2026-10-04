@@ -82,6 +82,24 @@ LEVEL_POLICIES = {
         '570e79e93a71296f69f91413b6f615de83c662ab3d6f9e31ff864cc001b9cbab',
         '570e79e93a71296f69f91413b6f615de83c662ab3d6f9e31ff864cc001b9cbab',
         (WFZ_SHAPE,), (WFZ_SHAPE,)),
+    'level/objects/CPZ_1.bin': LevelPolicy(
+        '672c6b5ed672b889ad8629662f8e569fafca953046bfeeff999207bae17a4046',
+        '79635ca9a52ca5052bcd2ad86bd9059d5815aadfe7391d170f2538442c47a66d',
+        '79635ca9a52ca5052bcd2ad86bd9059d5815aadfe7391d170f2538442c47a66d',
+        (('replace', 60, 1, 1), ('replace', 136, 1, 1)),
+        (('replace', 60, 1, 1), ('replace', 136, 1, 1))),
+    'level/objects/CPZ_2.bin': LevelPolicy(
+        '316c884cb1a26233eb1c67682d679d8e0fa4a3d353f76b4ca740ae705507f61b',
+        '0aeb9a4ef43f778976ea0c53493fbcc0df509c073d6291b28fa383e9a483a8a2',
+        '0aeb9a4ef43f778976ea0c53493fbcc0df509c073d6291b28fa383e9a483a8a2',
+        (('replace', 42, 1, 1), ('replace', 104, 1, 1), ('replace', 154, 2, 2)),
+        (('replace', 42, 1, 1), ('replace', 104, 1, 1), ('replace', 154, 2, 2))),
+    'level/objects/DEZ_1.bin': LevelPolicy(
+        '7418dacc85fae3b501637a3ff9bb93840f70f271916984530cdc03561c211492',
+        '3d93d7b360bc05b417976d1d08f5aaa8f78f2fd69c492eef0ac22aa12d62e578',
+        '3d93d7b360bc05b417976d1d08f5aaa8f78f2fd69c492eef0ac22aa12d62e578',
+        (('replace', 0, 2, 2), ('replace', 3, 1, 1)),
+        (('replace', 0, 2, 2), ('replace', 3, 1, 1))),
 }
 
 

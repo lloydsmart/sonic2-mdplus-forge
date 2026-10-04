@@ -9,6 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
 
+from door_data_evidence import DOORS, restore_v301
 from level_data_evidence import (
     OBJECT_ORDER,
     PRE_LEVEL,
@@ -121,7 +122,7 @@ class LevelDataBinaryTests(unittest.TestCase):
             ('stock', bugfixed.STOCK_BUGFIXED_ROM_PATH, bugfixed.STOCK_BUGFIXED_LISTING_PATH),
             ('mdplus', BuildVariant.BUGFIXED.rom_path, BuildVariant.BUGFIXED.prepared_dir / 's2.lst'),
         ):
-            rom, symbols = path.read_bytes(), modern.modern_symbols(listing)
+            rom, symbols = restore_v301(path.read_bytes(), modern.modern_symbols(listing), listing, kind)
             baseline = restore_pre_level(rom, symbols, kind)
             old_symbols = pre_level_symbols(symbols)
             # Freeze ALL symbols, including sound/Z80/Forge/RAM and assembly values.
@@ -136,6 +137,9 @@ class LevelDataBinaryTests(unittest.TestCase):
                 source_name = f'level/objects/{name}.bin'
                 retail = (modern.SOURCE_MODERN_DIR / source_name).read_bytes()
                 prepared = (BuildVariant.BUGFIXED.prepared_dir / source_name).read_bytes()
+                if name in DOORS:
+                    # This historical audit operates after reversing the door phase.
+                    prepared = retail
                 new_address = symbols['Objects_' + name]
                 self.assertEqual(baseline[old_address:old_address + len(retail)], retail)
                 self.assertEqual(rom[new_address:new_address + len(prepared)], prepared)

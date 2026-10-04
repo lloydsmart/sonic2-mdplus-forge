@@ -7,6 +7,25 @@ Versioning for its own tooling releases.
 
 ## [Unreleased]
 
+### Fixed
+
+- Adopt all nine pinned CPZ1/CPZ2/DEZ1 door subtype `$02` replacements together
+  with removal of the two Bugfixed Obj2D runtime `$03` stores. Derive records
+  from hash-checked dependency inputs; vendor no Sega placement payloads.
+- Audit all code/data relocation and reconstruct the exact released v3.0.1
+  stock and MD+ ROMs independently. Add compiled door initialization, mapping,
+  trigger, collision and movement tests, retaining prior level/audio evidence.
+  Production, Forge, Z80, RAM and unrelated Bugfixed decisions remain unchanged.
+- Hardware-qualify the exact post-v3.0.1 Bugfixed Door Data Test candidate
+  (`0951` / `e9f56f0e...`) on MiSTer Mega Drive core `26.06.03` for the targeted
+  door-data/runtime-workaround scope: CPZ1 2/2, CPZ2 4/4 and DEZ 3/3 doors pass,
+  including the ending transition and pause/music-restoration/reset/Level Select
+  sanity checks. Record brief CPZ2 slowdown during an invincibility monitor effect
+  as a non-blocking observation with no established link to the candidate.
+  Keep version metadata at `3.0.1`, OOZ2 deferred and Special Stage results
+  issue #26 unrelated/open. See the exact identity, results and qualification
+  boundary in [the hardware record](docs/BUGFIXED.md#targeted-door-data-mister-hardware-qualification).
+
 ## [3.0.1] - 2026-10-04
 
 ### Fixed

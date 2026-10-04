@@ -31,8 +31,8 @@ from tools.mdplus_builder.source import _clone_at, _git_output, genesis_checksum
 from tools.mdplus_builder.variants import BuildVariant
 
 # Independent observations from the first controlled build, not verifier constants.
-EXPECTED_IDENTITY = (2_097_152, '53DB', 'ae378a1f8b41d9e804a0d05cb21f7951',
-                     '9ff0b7b577de237cf2fe9e13415a943b7d30e228a12b96b851793c95ece7184f')
+EXPECTED_IDENTITY = (2_097_152, '9BE7', 'bd93d95a110be99e9eb9bafb3d31806f',
+                     '909e5f229fc4052f3c3c3c9a97c3a6b345117990796b0226dffbc98f88f00bc7')
 LAYOUT = {
     'PlayMusic': (0x135E, 0x135E), 'PlaySound': (0x1370, 0x1370),
     'PlaySound2': (0x1376, 0x1376), 'sndDriverInput': (0x1084, 0x1084),
@@ -42,7 +42,7 @@ LAYOUT = {
     'DecompressSoundDriver': (0xEC04A, 0xED04A), 'movewZ80CompSize': (0xEC04E, 0xED04E),
     'Snd_Driver': (0xEC0E8, 0xED0E8), 'Snd_Driver_End': (0xED04C, 0xEE04C),
     'Size_of_Snd_driver_guess': (0xF64, 0xF64),
-    'Obj57_FallApart': (0x31358, 0x317F2), 'return_313C4': (0x313C4, 0x3187C),
+    'Obj57_FallApart': (0x31358, 0x317E6), 'return_313C4': (0x313C4, 0x31870),
     'SoundIndex': (0xFEE91, 0x106E91), 'Snd_Sega': (0xF1E8C, 0xF9E8C),
     'MusicPoint1': (0xF0000, 0xF8000), 'MusicPoint2': (0xF8000, 0x100000),
     'SndDAC_Start': (0xED100, 0xF5100), 'SndDAC_End': (0xF0000, 0xF8000),
@@ -51,16 +51,16 @@ LAYOUT = {
     'Sprite_Table': (0xFFF800, 0xFFF800), 'Sprite_Table_P2': (0xFFDD00, 0xFFDD00),
     'Sprite_Table_End': (0xFFFA80, 0xFFFA80),
     'Vint0_noWater': (0x566, 0x566), 'H_Int': (0xF54, 0xF54),
-    'BuildSprites_2P': (0x1694E, 0x16BA2), 'BuildSprites_P2': (0x16A7A, 0x16CCE),
-    'BuildSprites_P2_NextLevel': (0x16B78, 0x16DCC),
-    'Obj2B_Init': (0x25A6E, 0x25E2A), 'Obj2B_Main': (0x25A9C, 0x25E58),
-    'loc_25ACE': (0x25ACE, 0x25E84),
-    'loc_25B8E': (0x25B8E, 0x25F44), 'Obj2B_MapUnc_25C6E': (0x25C6E, 0x26024),
-    'Map_obj2B_03F6_End': (0x260D6, 0x2648C), 'Obj2C': (0x26104, 0x264B8),
-    'Obj82': (0x2A290, 0x2A658), 'Obj82_Init': (0x2A2AA, 0x2A672),
-    'Obj82_Main': (0x2A312, 0x2A6DA), 'Obj82_Properties': (0x2A2A2, 0x2A66A),
-    'Obj82_Types': (0x2A358, 0x2A728), 'Obj82_MapUnc_2A476': (0x2A476, 0x2A846),
-    'Obj83': (0x2A4FC, 0x2A8CC),
+    'BuildSprites_2P': (0x1694E, 0x16B96), 'BuildSprites_P2': (0x16A7A, 0x16CC2),
+    'BuildSprites_P2_NextLevel': (0x16B78, 0x16DC0),
+    'Obj2B_Init': (0x25A6E, 0x25E1E), 'Obj2B_Main': (0x25A9C, 0x25E4C),
+    'loc_25ACE': (0x25ACE, 0x25E78),
+    'loc_25B8E': (0x25B8E, 0x25F38), 'Obj2B_MapUnc_25C6E': (0x25C6E, 0x26018),
+    'Map_obj2B_03F6_End': (0x260D6, 0x26480), 'Obj2C': (0x26104, 0x264AC),
+    'Obj82': (0x2A290, 0x2A64C), 'Obj82_Init': (0x2A2AA, 0x2A666),
+    'Obj82_Main': (0x2A312, 0x2A6CE), 'Obj82_Properties': (0x2A2A2, 0x2A65E),
+    'Obj82_Types': (0x2A358, 0x2A71C), 'Obj82_MapUnc_2A476': (0x2A476, 0x2A83A),
+    'Obj83': (0x2A4FC, 0x2A8C0),
 }
 PAGE_SYMBOLS = ('Sprite_Table_Alternate', 'Sprite_Table_P2_Alternate',
                 'Current_sprite_table_page', 'Sprite_table_page_flip_pending')
@@ -132,7 +132,7 @@ class StockBugfixedBinaryTests(unittest.TestCase):
         self.assertEqual(snapshot(protected), before)
         self.assertNotEqual(BuildVariant.PRODUCTION.rom_path.read_bytes(), BuildVariant.BUGFIXED.rom_path.read_bytes())
 
-    def test_pinned_source_policy_changes_only_eight_files(self):
+    def test_pinned_source_policy_changes_only_eleven_files(self):
         with tempfile.TemporaryDirectory(prefix='audit-curated-', dir=BUILD) as directory:
             work = Path(directory) / 'source'
             _clone_at('', bugfixed.AUDITED_COMMIT, work, modern.SOURCE_MODERN_DIR)
@@ -143,12 +143,14 @@ class StockBugfixedBinaryTests(unittest.TestCase):
             self.assertEqual({name for name in before if before[name] != after[name]},
                              {'s2.asm', 's2.constants.asm', 's2.sounddriver.asm',
                               'sound/sfx/BC - Spin Dash Release.asm', 'sound/music/9E - Credits.asm',
-                              'level/objects/EHZ_2.bin', 'level/objects/ARZ_2.bin', 'level/objects/WFZ_1.bin'})
+                              'level/objects/EHZ_2.bin', 'level/objects/ARZ_2.bin', 'level/objects/WFZ_1.bin',
+                              'level/objects/CPZ_1.bin', 'level/objects/CPZ_2.bin', 'level/objects/DEZ_1.bin'})
             self.assertEqual(set(before), set(after))
             self.assertEqual(set(_git_output(work, 'diff', '--name-only').splitlines()),
                              {'s2.asm', 's2.constants.asm', 's2.sounddriver.asm',
                               'sound/sfx/BC - Spin Dash Release.asm', 'sound/music/9E - Credits.asm',
-                              'level/objects/EHZ_2.bin', 'level/objects/ARZ_2.bin', 'level/objects/WFZ_1.bin'})
+                              'level/objects/EHZ_2.bin', 'level/objects/ARZ_2.bin', 'level/objects/WFZ_1.bin',
+                              'level/objects/CPZ_1.bin', 'level/objects/CPZ_2.bin', 'level/objects/DEZ_1.bin'})
             # Every unselected object/ring file, Fixed Files reference, unselected sound source,
             # and the separate compressed-music builder is still pristine.
             self.assertTrue(any(name.startswith('Utility Project Files/Fixed Files/') for name in before))
@@ -270,22 +272,24 @@ class StockBugfixedBinaryTests(unittest.TestCase):
 
     def test_pillar_insertion_and_alignment_are_local(self):
         listing = bugfixed.STOCK_BUGFIXED_LISTING_PATH.read_text()
-        self.assertRegex(listing, r'25E68 : 5142\s+subq\.w\s+#8,d2')
-        self.assertRegex(listing, r'264B6 : .*align 4')
-        self.assertRegex(listing, r'264B8 : .*!org')
-        self.assertRegex(listing, r'EC382 : .*align \$1000')
+        self.assertRegex(listing, r'25E5C : 5142\s+subq\.w\s+#8,d2')
+        self.assertRegex(listing, r'264AA : .*align 4')
+        self.assertRegex(listing, r'264AC : .*!org')
+        self.assertRegex(listing, r'EC182 : .*align \$1000')
+        # Door retirement shifts this whole code region by -12; internal
+        # pillar compensation and its own alignment remain unchanged.
         # All seven Obj2B jump stubs moved by two; the following Obj2C did not.
         for index, target in enumerate(('DisplaySprite', 'DeleteObject', 'MarkObjGone',
                                         'AllocateObjectAfterCurrent', 'Adjust2PArtPointer',
                                         'SolidObject', 'ObjectMove')):
-            address = 0x2648C + index * 6
+            address = 0x26480 + index * 6
             expected = bytes.fromhex('4ef9') + self.fixed_symbols[target].to_bytes(4, 'big')
             self.assertEqual(self.fixed[address:address + 6], expected)
-        self.assertEqual(self.fixed[0x264B6:0x264B8], bytes(2))
-        # Unmoved tables must still point to the two moved pillar targets.
-        self.assertEqual(int.from_bytes(self.fixed[0x25E28:0x25E2A], 'big'),
+        self.assertEqual(self.fixed[0x264AA:0x264AC], bytes(2))
+        # After common door relocation, tables still point to the corrected pillar targets.
+        self.assertEqual(int.from_bytes(self.fixed[0x25E1C:0x25E1E], 'big'),
                          self.fixed_symbols['loc_25B8E'] - self.fixed_symbols['Obj2B_Index'])
-        self.assertEqual(int.from_bytes(self.fixed[0x429E0:0x429E4], 'big'),
+        self.assertEqual(int.from_bytes(self.fixed[0x429D4:0x429D8], 'big'),
                          0x2B000000 | self.fixed_symbols['Obj2B_MapUnc_25C6E'])
 
 
@@ -437,10 +441,10 @@ class ARZObj82CompiledTests(unittest.TestCase):
         for name in ('curated', 'mdplus'):
             with self.subTest(image=name):
                 rom, symbols = self.images[name]
-                self.assertEqual(rom[0x2A700:0x2A712], fixed)
-                self.assertEqual(symbols['last_btst_converted.notPillar'], 0x2A70E)
-                self.assertEqual(symbols['Obj82_Types'], 0x2A728)
-                self.assertEqual(rom[0x2A712:0x2A716], bytes.fromhex('610001a6'))
+                self.assertEqual(rom[0x2A6F4:0x2A706], fixed)
+                self.assertEqual(symbols['last_btst_converted.notPillar'], 0x2A702)
+                self.assertEqual(symbols['Obj82_Types'], 0x2A71C)
+                self.assertEqual(rom[0x2A706:0x2A70A], bytes.fromhex('610001a6'))
 
 
 class MCZDrillCompiledTests(unittest.TestCase):

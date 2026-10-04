@@ -56,8 +56,10 @@ The v3.0.0 Obj82-corrected `d1668976...` and intermediate selective-audio
 `b04c2fd3...` identities retain their own historical hardware evidence. Global
 music/SFX data fixes, Sky Chase/Death Egg audio-data changes, Z80 driver fixes,
 the alternate 2P sprite mechanism and every other Fixed Files substitution
-remain excluded. CPZ/DEZ door replacements and OOZ2 push springs remain deferred.
-Production retains its exact Stage 5 identity.
+remain excluded from those historical identities. The current post-v3.0.1
+`0951` / `e9f56f0e...` door candidate is hardware-qualified on the same core for
+the [targeted door-data/runtime-workaround scope and regression sanity](docs/BUGFIXED.md#targeted-door-data-mister-hardware-qualification).
+OOZ2 push springs remain deferred. Production retains its exact Stage 5 identity.
 
 ## What the build does
 
@@ -210,11 +212,29 @@ paths cannot target the other flavour's reserved ROM or prepared directory.
 Internally, `BuildVariant` selects isolated paths, package naming, strict ROM
 identity and an audited layout profile. Production adapts pristine pinned REV01.
 Bugfixed first applies the authoritative `bugfixed.apply_policy()` transformation,
-checks all eight post-policy source/object hashes, then applies the shared Forge adapter.
+checks all eleven post-policy source/object hashes, then applies the shared Forge adapter.
 Its backend starts at `$108000`, after the curated sound banks; Production
 stays at `$100000`. Each profile checks its own hooks, loader, compressed driver
 and reference baseline. Both preserve the same Forge RAM allocation and all
 21 short-lived MD+ command transactions, activated only after startup checksum.
+
+The current feature branch builds a **post-v3.0.1 door-data candidate,
+hardware-qualified on MiSTer Mega Drive core `26.06.03` for the targeted
+door-data/runtime-workaround scope and regression sanity**: all nine
+CPZ1/CPZ2/DEZ1 Obj2D subtypes come from pinned Fixed Files as `$02`, and both
+Bugfixed runtime `$03` overrides are removed atomically.
+Bugfixed MD+ is 2,097,152 bytes, stored/calculated checksum `0951`, MD5
+`5d3e5979d3f110d2761da3166b14b7cf`, SHA-256
+`e9f56f0efd72844918918f2efdecf6183f5bdabb47f235b61cc511a16942d3b5`.
+Production, selective audio, prior selected layouts, Forge/Z80/RAM and version
+metadata `3.0.1` remain unchanged. CPZ1 2/2, CPZ2 4/4 and DEZ 3/3 affected doors
+passed; progression through both DEZ bosses and the ending transition succeeded.
+Pause/unpause, MD+ -> native -> MD+ restoration, soft reset and Level Select
+passed, with no sprite/object corruption or targeted hardware regression observed.
+Brief CPZ2 slowdown during an invincibility monitor effect remains a non-blocking
+observation with no established candidate link. See the [door audit](docs/BUGFIXED.md#post-v301-cpzdez-door-candidate)
+and [hardware results and qualification boundary](docs/BUGFIXED.md#targeted-door-data-mister-hardware-qualification).
+OOZ2 stays deferred; Special Stage results issue #26 remains unrelated and open.
 
 Released v3.0.1 Bugfixed MD+ is 2,097,152 bytes, checksum `C145`, MD5
 `50e81d88e257f8d14608e57801b628c5`, SHA-256
@@ -462,6 +482,7 @@ PYTHONPATH=. build/emulation-venv/bin/python tests/check_bugfixed_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_stock_bugfixed_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_audio_data_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_level_data_binary.py
+PYTHONPATH=. build/emulation-venv/bin/python tests/check_door_data_binary.py
 ```
 
 The binary suites check the exact production identity and execute compiled
@@ -475,6 +496,11 @@ rebuilds from deleted Bugfixed outputs and checks isolation in both build orders
 CI runs the same three CPU suites against each variant; their default invocation
 remains Production. The stock Bugfixed audit independently checks the frozen
 source policy, exclusions, compiled gameplay, RAM and retail Z80 evidence.
+The door audit reverses only the post-v3.0.1 door phase to recover both exact
+released v3.0.1 images, accounting for every moved byte, address operand and
+symbol, and executes compiled Obj2D behavior at all nine placements. It scans
+tracked and proposed files for copied door payloads. The older level/audio audits
+first apply that independent inverse; their historical identities stay frozen.
 The selective audio audit reconstructs both complete v3 Bugfixed images, freezes
 all symbol addresses and compares selected compiled data with pristine upstream
 fixed-data assemblies. The level audit first reconstructs both pre-level ROMs
