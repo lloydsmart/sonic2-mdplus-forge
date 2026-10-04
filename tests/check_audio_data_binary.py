@@ -14,6 +14,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import z80
+from door_data_evidence import restore_v301
 from level_data_evidence import pre_level_symbols, restore_pre_level
 
 from tools.mdplus_builder import bugfixed, modern
@@ -51,6 +52,9 @@ class SelectiveAudioBinaryTests(unittest.TestCase):
     def test_complete_v3_binary_diff_and_all_symbol_addresses(self):
         report = {}
         for name, (rom, symbols) in self.images.items():
+            listing = (bugfixed.STOCK_BUGFIXED_LISTING_PATH if name == 'stock' else
+                       BuildVariant.BUGFIXED.prepared_dir / 's2.lst')
+            rom, symbols = restore_v301(rom, symbols, listing, name)
             rom = restore_pre_level(rom, symbols, name)
             symbols = pre_level_symbols(symbols)
             old_checksum, old_sha256, symbol_sha256 = V3[name]

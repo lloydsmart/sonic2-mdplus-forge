@@ -18,8 +18,8 @@ from tools.mdplus_builder.variants import BuildVariant
 
 PRODUCTION, BUGFIXED = BuildVariant
 # Observed from the controlled first build; independently reproduced from pristine inputs.
-IDENTITY = (2_097_152, 'C145', '50e81d88e257f8d14608e57801b628c5',
-            'f33a1946a609b8045bb56ffce2aba05196190965fed6ddf5f8eb3b80c52a0c52')
+IDENTITY = (2_097_152, '0951', '5d3e5979d3f110d2761da3166b14b7cf',
+            'e9f56f0efd72844918918f2efdecf6183f5bdabb47f235b61cc511a16942d3b5')
 # Complete 15-byte expansions, in source order; all eight source operands audited.
 BANK_SWITCHES = {0x9C: 'SoundIndex', 0xD4: 'SndDAC_Start', 0x62E: 'SoundIndex',
                  0x701: 'Snd_Sega', 0x982: 'SoundIndex', 0xC76: 'MusicPoint1',
@@ -104,7 +104,7 @@ class BugfixedBinaryTests(unittest.TestCase):
             masked[start:end] = bytes(end - start)
         self.assertEqual(hashlib.sha256(masked).hexdigest(), self.layout.stock_masked_sha256)
         # No arbitrary bytes in the curated gameplay or trailing bank space can be ignored.
-        offsets = [0x2000, 0x25E68, 0x2A70D, 0x317F2, 0x3F7FA, 0xF5100, 0x107FEB, 0x107FEC, 0x1086C0, 0x1FFFFF]
+        offsets = [0x2000, 0x25E5C, 0x2A701, 0x317E6, 0x3F7FA, 0xF5100, 0x107FEB, 0x107FEC, 0x1086C0, 0x1FFFFF]
         offsets += list(HOOKS) + [0x1084, 0xED050, 0xED0E8, 0xEE093, 0xF50FF,
                                   0x108000, 0x1082B6, 0x108300, 0x1083A8]
         with tempfile.TemporaryDirectory(dir=BUILD) as directory:

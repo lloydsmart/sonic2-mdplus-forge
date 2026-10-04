@@ -95,3 +95,5 @@ jobs:
         run: PYTHONPATH=. python tests/check_audio_data_binary.py
       - name: Audit selected level semantics and complete pre-level ROM reconstruction
         run: PYTHONPATH=. python tests/check_level_data_binary.py
+      - name: Audit post-v3.0.1 door data, relocation and compiled behavior
+        run: PYTHONPATH=. python tests/check_door_data_binary.py

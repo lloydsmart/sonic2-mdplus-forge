@@ -20,7 +20,8 @@ class CuratedPolicyTests(unittest.TestCase):
     def main_fixture(self):
         return ('\nfixBugs = 0\n\nFixMusicAndSFXDataBugs = fixBugs\n' +
                 '\n'.join(pattern * count for pattern, count in bugfixed.PAGE_FLIP_PATTERNS['s2.asm']) +
-                bugfixed.MCZ_RIGHT_DRILL_OLD + bugfixed.ARZ_PILLAR_OLD + bugfixed.ARZ_OBJ82_OLD)
+                bugfixed.MCZ_RIGHT_DRILL_OLD + bugfixed.ARZ_PILLAR_OLD + bugfixed.ARZ_OBJ82_OLD +
+                "".join(old for old, _ in bugfixed.DOOR_PATTERNS))
 
     def test_rejects_wrong_source_hash_and_unknown_file(self):
         for name in (*bugfixed.SOURCE_HASHES, 'build.lua'):
@@ -76,6 +77,18 @@ class CuratedPolicyTests(unittest.TestCase):
                       source.replace(bugfixed.ARZ_PILLAR_OLD, bugfixed.ARZ_PILLAR_FIXED)):
             with self.assertRaisesRegex(BuildError, 'source pattern'):
                 self.transform_fixture('s2.asm', wrong)
+
+    def test_door_overrides_require_each_exact_pristine_context(self):
+        source = self.main_fixture()
+        result = self.transform_fixture('s2.asm', source)
+        for old, new in bugfixed.DOOR_PATTERNS:
+            self.assertIn(new, result)
+            self.assertNotIn(old, result)
+            for wrong in (source.replace(old, ''), source + old,
+                          source.replace(old, new), source.replace(old, old.replace('#3,', '#2,'))):
+                with self.assertRaisesRegex(BuildError, 'source pattern'):
+                    self.transform_fixture('s2.asm', wrong)
+        self.assertNotIn('move.b\t#3,subtype(a0)', result)
 
     def test_driver_and_ram_exclusions(self):
         self.assertEqual(self.transform_fixture('s2.sounddriver.asm', '\nFixDriverBugs = fixBugs\n'),

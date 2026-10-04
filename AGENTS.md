@@ -24,7 +24,12 @@ or generated MiSTer packages.
   fixes and global music/SFX fixes off; select only Spin Dash Release and Credits
   data corrections through the authoritative policy. Select only the audited EHZ2,
   selective ARZ2 (retaining its bubble generator) and WFZ1 object corrections
-  from pinned Fixed Files references; exclude all other Fixed Files and the
+  from pinned Fixed Files references. The post-v3.0.1 door candidate also selects
+  all nine CPZ1/CPZ2/DEZ1 `$02` replacements atomically with retirement of both
+  Obj2D runtime `$03` stores. Derive records from the pinned references; never
+  vendor placement payloads. The exact `e9f56f0e...` candidate is hardware-qualified
+  on MiSTer Mega Drive core `26.06.03` for the targeted door-data/runtime-workaround
+  scope and regression sanity in `docs/BUGFIXED.md`. Exclude all other Fixed Files and the
   complete alternate 2P sprite mechanism. The exact level-data `f33a1946...`
   candidate is hardware-qualified on the same core for the targeted scope in
   `docs/BUGFIXED.md`. Preserve the `$FFF100-$FFF5FF` RAM
@@ -61,6 +66,10 @@ both MD+ builds. Keep the stock Bugfixed strict identity and exclusion audits
 independent of the MD+ Bugfixed verification profile.
 Run `tests/check_level_data_binary.py` after all four builds for selected-entry
 semantics, exclusions, complete pre-level ROM reconstruction and symbol movement.
+Run `tests/check_door_data_binary.py` for compiled Obj2D behavior, payload-boundary
+audit and complete reversal to the frozen released v3.0.1 stock/MD+ identities.
+The previous level/audio audits must reverse the door phase before checking their
+unchanged historical baselines. Keep `docs/releases/v3.0.1.md` frozen.
 Audio changes require an FFmpeg conversion test using non-copyrighted
 synthetic input.
 

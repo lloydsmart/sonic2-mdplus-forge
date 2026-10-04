@@ -462,7 +462,8 @@ class ModernLiveTests(unittest.TestCase):
         sites = [match.start() for match in re.finditer(re.escape(pattern), m.rom)]
         expected = {
             'production': [0x12012, 0x1206E, 0x1294A, 0x12960, 0x40D36, 0x40D7E],
-            'bugfixed': [0x1223a, 0x12296, 0x12b7a, 0x12b90, 0x41292, 0x412da],
+            # The door phase removes 12 bytes before every Bugfixed call site.
+            'bugfixed': [0x1222e, 0x1228a, 0x12b6e, 0x12b84, 0x41286, 0x412ce],
         }
         self.assertEqual(sites, expected[VARIANT.value])
         for address in sites:

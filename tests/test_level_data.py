@@ -22,8 +22,9 @@ class LevelDataPolicyTests(unittest.TestCase):
 
     def test_only_approved_files_are_selected(self):
         self.assertEqual(set(LEVEL_POLICIES), {
-            'level/objects/EHZ_2.bin', 'level/objects/ARZ_2.bin', 'level/objects/WFZ_1.bin'})
-        for name in ('CPZ_1', 'CPZ_2', 'DEZ_1', 'OOZ_2', 'HTZ_1', 'MTZ_3'):
+            'level/objects/EHZ_2.bin', 'level/objects/ARZ_2.bin', 'level/objects/WFZ_1.bin',
+            'level/objects/CPZ_1.bin', 'level/objects/CPZ_2.bin', 'level/objects/DEZ_1.bin'})
+        for name in ('OOZ_2', 'HTZ_1', 'MTZ_3'):
             with self.assertRaisesRegex(BuildError, 'Unselected'):
                 transform_layout(b'', b'', f'level/objects/{name}.bin')
         with self.assertRaisesRegex(BuildError, 'Unselected'):

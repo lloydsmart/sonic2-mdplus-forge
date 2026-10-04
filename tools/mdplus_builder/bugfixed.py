@@ -21,7 +21,7 @@ SOURCE_HASHES = {
     'sound/music/9E - Credits.asm': 'df894c3f4a07b3869c6745ece8890500639ccef724d1b0233ecd84b977953914',
 }
 POST_POLICY_HASHES = {
-    's2.asm': 'a5e234708be87f5b984d05f6bd4596a28ee792e210822cacd8ed346a9ea8f61f',
+    's2.asm': '3623acc2b4e00be962c432b27601615328e4f926071cbc6a460d9650eadd2773',
     's2.constants.asm': 'e6fac75b24da9ecbd2a11ab7d474a3fe1426afa134ef41d9170202f95e77ac54',
     's2.sounddriver.asm': 'ce96d9dda766fefa33de23ddccea373b58aceb92ec2a91fba30d998105d667a8',
     'sound/sfx/BC - Spin Dash Release.asm': 'e405419ccfe906a004c02f8f1ca5e4a56eef68b7315f227b6e25bab029be944a',
@@ -79,6 +79,40 @@ ARZ_OBJ82_FIXED = ARZ_OBJ82_OLD.replace(
 ).replace("\tsubq.w\t#2,d3\n", "\tsubq.w\t#2,d2\n").replace(
     "    endif\n\tjsrto\tJmpTo23_SolidObject",
     "    endif\n\tmove.w\td2,d3\n\taddq.w\t#1,d3\n\tjsrto\tJmpTo23_SolidObject",
+)
+
+# Atomic with the three door layouts: remove only these two pinned overrides.
+DOOR_PATTERNS = (
+    (
+        '\tmove.w\t#make_art_tile(ArtTile_ArtNem_ConstructionStripes_2,1,0),art_tile(a0)\n'
+        '\tmove.b\t#8,width_pixels(a0)\n'
+        '    if fixBugs\n'
+        '\t; This is sort of a hack. Chemical Plant and Death Egg use the wrong subtype,\n'
+        '\t; so a more proper fix would be to replace all instances with subtype 3.\n'
+        '\n'
+        '\t; If you have replaced its layout with its fixed version, this line can be\n'
+        '\t; safely deleted.\n'
+        '\tmove.b\t#3,subtype(a0)\n'
+        '    endif\n',
+        '\tmove.w\t#make_art_tile(ArtTile_ArtNem_ConstructionStripes_2,1,0),art_tile(a0)\n'
+        '\tmove.b\t#8,width_pixels(a0)\n'
+        '\t; Forge: pinned Fixed Files select frame $02 through the generic subtype path.\n'
+    ),
+    (
+        '\tmove.w\t#make_art_tile(ArtTile_ArtNem_ConstructionStripes_1,1,0),art_tile(a0)\n'
+        '\tmove.b\t#8,width_pixels(a0)\n'
+        '    if fixBugs\n'
+        '\t; This is sort of a hack. Chemical Plant and Death Egg use the wrong subtype,\n'
+        '\t; so a more proper fix would be to replace all instances with subtype 3.\n'
+        '\n'
+        '\t; If you have replaced its layout with its fixed version, this line can be\n'
+        '\t; safely deleted.\n'
+        '\tmove.b\t#3,subtype(a0)\n'
+        '    endif\n',
+        '\tmove.w\t#make_art_tile(ArtTile_ArtNem_ConstructionStripes_1,1,0),art_tile(a0)\n'
+        '\tmove.b\t#8,width_pixels(a0)\n'
+        '\t; Forge: pinned Fixed Files select frame $02 through the generic subtype path.\n'
+    ),
 )
 
 SPIN_DASH_FILE = 'sound/sfx/BC - Spin Dash Release.asm'
@@ -144,9 +178,9 @@ AUDIO_PATTERNS = {
 }
 
 STOCK_BUGFIXED_SIZE = 2_097_152
-STOCK_BUGFIXED_CHECKSUM = "53DB"
-STOCK_BUGFIXED_MD5 = "ae378a1f8b41d9e804a0d05cb21f7951"
-STOCK_BUGFIXED_SHA256 = "9ff0b7b577de237cf2fe9e13415a943b7d30e228a12b96b851793c95ece7184f"
+STOCK_BUGFIXED_CHECKSUM = "9BE7"
+STOCK_BUGFIXED_MD5 = "bd93d95a110be99e9eb9bafb3d31806f"
+STOCK_BUGFIXED_SHA256 = "909e5f229fc4052f3c3c3c9a97c3a6b345117990796b0226dffbc98f88f00bc7"
 
 # Exact context anchors, not a rewrite of arbitrary fixBugs expressions.
 # The two normal VInt upload paths deliberately share one anchor (count 2).
@@ -187,6 +221,8 @@ def transform_source(data: bytes, filename: str) -> bytes:
         text = _replace_exact(text, MCZ_RIGHT_DRILL_OLD, MCZ_RIGHT_DRILL_FIXED)
         text = _replace_exact(text, ARZ_PILLAR_OLD, ARZ_PILLAR_FIXED)
         text = _replace_exact(text, ARZ_OBJ82_OLD, ARZ_OBJ82_FIXED)
+        for old, new in DOOR_PATTERNS:
+            text = _replace_exact(text, old, new)
     elif filename == "s2.sounddriver.asm":
         text = _replace_exact(text, "\nFixDriverBugs = fixBugs\n", "\nFixDriverBugs = 0\n")
     for old, new in AUDIO_PATTERNS.get(filename, ()):

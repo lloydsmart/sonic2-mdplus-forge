@@ -94,8 +94,8 @@ VERIFICATION_PROFILES = {
     ),
     # Independently reproduced curated MD+ identity; never rebaseline Production.
     BuildVariant.BUGFIXED: VerificationProfile(
-        2_097_152, "C145", "50e81d88e257f8d14608e57801b628c5",
-        "f33a1946a609b8045bb56ffce2aba05196190965fed6ddf5f8eb3b80c52a0c52",
+        2_097_152, "0951", "5d3e5979d3f110d2761da3166b14b7cf",
+        "e9f56f0efd72844918918f2efdecf6183f5bdabb47f235b61cc511a16942d3b5",
     ),
 }
 
@@ -564,7 +564,7 @@ LAYOUT_PROFILES = {
     ),
     BuildVariant.BUGFIXED: LayoutProfile(
         True, {
-            "s2.asm": "a5e234708be87f5b984d05f6bd4596a28ee792e210822cacd8ed346a9ea8f61f",
+            "s2.asm": "3623acc2b4e00be962c432b27601615328e4f926071cbc6a460d9650eadd2773",
             "s2.constants.asm": "e6fac75b24da9ecbd2a11ab7d474a3fe1426afa134ef41d9170202f95e77ac54",
             "s2.sounddriver.asm": "ce96d9dda766fefa33de23ddccea373b58aceb92ec2a91fba30d998105d667a8",
         },
@@ -584,7 +584,7 @@ LAYOUT_PROFILES = {
         # Relative branches keep all backend/router bytes identical. The only
         # absolute internal pointer is the separately checked ACK callback.
         HANDOFF_SHA256, ROUTER_SHA256, dict(ROUTINE_SHA256),
-        0x200000, "53DB", "1e8d2df3382042f15102491dbfa622e5f3ccd3f47f865af83f8c1a69930b87ad",
+        0x200000, "9BE7", "87d7102c04607783e2f6b4af02800bb0dd008e9beb1bdbae297a02610198882c",
     ),
 }
 
