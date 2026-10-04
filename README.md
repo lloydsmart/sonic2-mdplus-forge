@@ -47,9 +47,13 @@ Forge MD+, using isolated outputs and its own audited ROM identity and layout.
 The released v3 Obj82-corrected `d1668976...` hash remains hardware-qualified
 after targeted ARZ testing. The exact post-v3 selective audio `b04c2fd3...`
 candidate is also **hardware-qualified on MiSTer Mega Drive core `26.06.03`**
-for its targeted audio and gameplay scope. Only Spin Dash Release and Credits
-data corrections are selected; global music/SFX data fixes, Z80 driver fixes,
-the alternate 2P sprite mechanism and Fixed Files remain excluded.
+for its targeted audio and gameplay scope, as the pre-level-data baseline.
+The current level-data `f33a1946...` candidate adds only approved EHZ2, selective
+ARZ2 and WFZ1 object corrections and is **hardware-qualified on MiSTer Mega Drive
+core `26.06.03` for that targeted scope**. Spin Dash Release
+and Credits remain the only selected audio-data fixes; global music/SFX data
+fixes, Z80 driver fixes, the alternate 2P sprite mechanism and all other Fixed
+Files remain excluded.
 Production retains its exact Stage 5 identity.
 
 ## What the build does
@@ -203,13 +207,27 @@ paths cannot target the other flavour's reserved ROM or prepared directory.
 Internally, `BuildVariant` selects isolated paths, package naming, strict ROM
 identity and an audited layout profile. Production adapts pristine pinned REV01.
 Bugfixed first applies the authoritative `bugfixed.apply_policy()` transformation,
-checks all five post-policy source hashes, then applies the shared Forge adapter.
+checks all eight post-policy source/object hashes, then applies the shared Forge adapter.
 Its backend starts at `$108000`, after the curated sound banks; Production
 stays at `$100000`. Each profile checks its own hooks, loader, compressed driver
 and reference baseline. Both preserve the same Forge RAM allocation and all
 21 short-lived MD+ command transactions, activated only after startup checksum.
 
-Bugfixed MD+ is 2,097,152 bytes, checksum `6AD6`, MD5
+Current Bugfixed MD+ is 2,097,152 bytes, checksum `C145`, MD5
+`50e81d88e257f8d14608e57801b628c5`, SHA-256
+`f33a1946a609b8045bb56ffce2aba05196190965fed6ddf5f8eb3b80c52a0c52`.
+Its approved level-data edits add 24 uncompressed bytes, absorbed by existing
+alignment; sound, Z80, Forge and RAM stay fixed. Software and clean Linux
+validation pass; targeted MiSTer qualification on core `26.06.03` also passed
+for the selected EHZ2 fixes and boss/capsule progression, ARZ2 loop progression
+and retained bubble generator, and WFZ diagonal conveyor (object `$72`). Native
+SFX over MD+, pause/unpause, temporary native music and MD+ restoration, and
+reset passed, with no obvious object corruption observed. This adds targeted
+evidence for the level-data changes; no new full-game playthrough or comprehensive
+retest of previous Bugfixed features is claimed. See the
+[level-data audit and hardware results](docs/BUGFIXED.md#targeted-level-data-mister-hardware-qualification).
+
+The hardware-qualified pre-level-data Bugfixed baseline is checksum `6AD6`, MD5
 `ef060d788f896099075e370195120ff2`, SHA-256
 `b04c2fd39e804719db599cca014966b19f07b16140688ee265c1dc759cb2212b`.
 This exact post-v3 candidate passed targeted MiSTer hardware qualification on
@@ -224,7 +242,7 @@ No new full-game playthrough or comprehensive 2P soak is claimed.
 Exactly Spin Dash Release
 transpose and Credits pitch data are corrected; the obsolete Credits compensation
 is neutralised without moving data. `FixMusicAndSFXDataBugs` remains globally zero.
-Sky Chase, Death Egg, Z80 driver fixes and Fixed Files remain excluded. See the
+Sky Chase, Death Egg and Z80 driver fixes remain excluded. See the
 [compiled audio audit and hardware results](docs/BUGFIXED.md#post-v3-selective-audio-data-candidate).
 The revised curated policy retains upstream's ARZ Rising Pillar culling fix
 (explicit height, width `$1C`, display radius `$20`) while subtracting eight
@@ -439,6 +457,7 @@ FORGE_TEST_VARIANT=bugfixed PYTHONPATH=. build/emulation-venv/bin/python tests/c
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_bugfixed_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_stock_bugfixed_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_audio_data_binary.py
+PYTHONPATH=. build/emulation-venv/bin/python tests/check_level_data_binary.py
 ```
 
 The binary suites check the exact production identity and execute compiled
@@ -454,7 +473,10 @@ remains Production. The stock Bugfixed audit independently checks the frozen
 source policy, exclusions, compiled gameplay, RAM and retail Z80 evidence.
 The selective audio audit reconstructs both complete v3 Bugfixed images, freezes
 all symbol addresses and compares selected compiled data with pristine upstream
-fixed-data assemblies. Generated reports and listings remain under ignored `build/`.
+fixed-data assemblies. The level audit first reconstructs both pre-level ROMs
+exactly, enumerates all symbol movement and verifies every compiled object file,
+pointer and boundary against its selected or pristine input. Generated reports
+and listings remain under ignored `build/`.
 
 For source-policy changes, run the same reference builds and compiled checks in
 a disposable clean Linux copy, with one `make bootstrap` and no reused build

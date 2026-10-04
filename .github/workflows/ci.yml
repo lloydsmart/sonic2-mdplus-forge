@@ -93,3 +93,5 @@ jobs:
         run: PYTHONPATH=. python tests/check_stock_bugfixed_binary.py
       - name: Audit selective audio data against v3 and upstream fixed semantics
         run: PYTHONPATH=. python tests/check_audio_data_binary.py
+      - name: Audit selected level semantics and complete pre-level ROM reconstruction
+        run: PYTHONPATH=. python tests/check_level_data_binary.py

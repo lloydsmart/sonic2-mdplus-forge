@@ -14,6 +14,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import z80
+from level_data_evidence import pre_level_symbols, restore_pre_level
 
 from tools.mdplus_builder import bugfixed, modern
 from tools.mdplus_builder.common import BUILD, BuildError, run
@@ -50,6 +51,8 @@ class SelectiveAudioBinaryTests(unittest.TestCase):
     def test_complete_v3_binary_diff_and_all_symbol_addresses(self):
         report = {}
         for name, (rom, symbols) in self.images.items():
+            rom = restore_pre_level(rom, symbols, name)
+            symbols = pre_level_symbols(symbols)
             old_checksum, old_sha256, symbol_sha256 = V3[name]
             self.assertEqual(len(rom), 2_097_152)
             # Freeze the entire parsed v3 symbol map, including sound, Z80 and RAM.
@@ -100,7 +103,7 @@ class SelectiveAudioBinaryTests(unittest.TestCase):
                     bugfixed.apply_policy(work)
                 self.assertEqual({n: (work / n).read_bytes() for n in originals}, originals)
             result = bugfixed.apply_policy(work)
-            self.assertEqual(result, bugfixed.POST_POLICY_HASHES)
+            self.assertEqual(result, bugfixed.POLICY_HASHES)
             for name in bugfixed.AUDIO_PATTERNS:
                 self.assertEqual((work / name).read_bytes(), (BuildVariant.BUGFIXED.prepared_dir / name).read_bytes())
                 self.assertEqual(originals[name], (BuildVariant.PRODUCTION.prepared_dir / name).read_bytes())

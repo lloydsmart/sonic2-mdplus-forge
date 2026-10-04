@@ -12,16 +12,396 @@ The maintained builds have distinct policies and verification profiles:
 | Stock Production reference | Untouched pinned REV01 | None |
 | Stock Bugfixed reference | Curated game fixes described here | None |
 | Production MD+ | Pristine retail policy | Hardware-qualified Stage 5 |
-| Bugfixed MD+ | Curated policy plus two selected audio-data fixes | Hardware-qualified; targeted post-v3 scope below |
+| Bugfixed MD+ | Curated policy, selective audio and three level layouts | Hardware-qualified; targeted scope below |
 
 `rom-bugfixed` and its package now integrate curated gameplay fixes with Forge
 MD+. Production remains the default hardware-qualified build with its exact
 Stage 5 identity. **The released v3 Obj82-corrected hash was hardware-qualified on
-MiSTer Mega Drive core `26.06.03` after targeted ARZ testing. The current
+MiSTer Mega Drive core `26.06.03` after targeted ARZ testing. The pre-level-data
 selective audio `b04c2fd3...` candidate is also hardware-qualified on that core
-for the targeted post-v3 scope below.** The preceding
+for the targeted post-v3 scope below. The exact level-data `f33a1946...` candidate
+has now passed its own targeted qualification on the same core.** The preceding
 Obj2B qualification and earlier broad 1P/2P results remain historical evidence;
 the exact identities, test scope and evidence chain are recorded below.
+
+## Post-v3 selective level-data candidate
+
+This development candidate adds only the three approved EHZ2 placements, the
+ARZ2 progression pathswapper and the WFZ1 conveyor correction. The exact
+`b04c2fd3...` audio-polish candidate remains the hardware-qualified pre-level-data
+baseline. **The exact level-data `f33a1946...` candidate is software-validated
+and hardware-qualified on MiSTer Mega Drive core `26.06.03` for the selected
+level-data changes and regression sanity scope recorded below.** Neither the
+pin nor Production changes.
+
+### Provenance and exact selected semantics
+
+The reference is `Utility Project Files/Fixed Files/` in the immutable pinned
+dependency. Upstream introduced it in
+[`1fe74ae94d6233b34e4fd10bd8d4282cb1ca8305`](https://github.com/sonicretro/s2disasm/commit/1fe74ae94d6233b34e4fd10bd8d4282cb1ca8305),
+"Added Fixed Files folder". Use EHZ2 only from the current
+[`380f37a731bfc720bb0371a35a593184a7ec5e43`](https://github.com/sonicretro/s2disasm/commit/380f37a731bfc720bb0371a35a593184a7ec5e43),
+"Fix fixed EHZ2 object layout", which also revised the ARZ2 reference.
+`Fixed Files.txt` is the authoritative explanation of the intended changes;
+the Sonic Jam origins below are upstream's attribution, not an independent
+comparison against a Jam ROM.
+
+Indices below are zero-based retail indices. Forge stores only operation,
+index and entry-count metadata. Actual six-byte placements, including their
+flags, are read from the hash-checked pinned dependency at build time.
+
+| Layout/index | Reference index | Operation | Old/new count | Purpose |
+| --- | --- | --- | --- | --- |
+| EHZ2/29 | 29 | Insert | 0/1 | Cave-entrance wall |
+| EHZ2/64 | 65 | Insert | 0/1 | Wall/spring floor clip guard |
+| EHZ2/142 | 144 | Insert | 0/1 | Corridor pathswapper |
+| ARZ2/119 | 118 | Insert | 0/1 | Loop approached from below |
+| WFZ1/127 | 127 | Replace | 1/1 | Working conveyor |
+
+All selected entries have zero orientation/remember flags. EHZ2's wall/spring
+guard and corridor pathswapper, and ARZ2's pathswapper, are attributed to Sonic
+Jam in upstream notes. The cave wall has no such attribution. Obj74 derives
+half-width/radius `$08/$08` for subtype `$00`, and `$10/$60` for `$1B`.
+Obj03 uses bit 2 for a Y-crossing switch and the low two bits for its radius;
+ARZ2's `$26` selects the `$80` radius, while EHZ2's `$01` selects an X-crossing
+switch with `$40` radius. Other subtype bits are preserved exactly.
+
+EHZ2 has precisely those three insertions and no replacements/deletions.
+Its prepared target equals the complete current pinned reference. In
+[issue #111](https://github.com/sonicretro/s2disasm/issues/111), the reported symptom
+was a signpost preventing the capsule spawn. The upstream diagnosis identifies
+an invisible wall at `$1490` incorrectly stored after the prison at `$2B50`.
+The loader scans by camera X, so that unsorted placement corrupts traversal.
+Comparing the parent revision to the pin shows the wall moving from the tail
+to its sorted position and removal of a trailing `$FFFF,0,0` boundary entry.
+The current reference has no embedded boundary, sorted X coordinates, and every
+retail signpost/capsule entry unchanged. Its final capsule remains byte-identical
+to the pinned retail entry. This proves the source-layout regression is absent.
+Separately, the targeted hardware test reported normal boss/capsule progression on the exact
+level-data candidate.
+
+The complete ARZ2 reference has exactly two differences: deletion of retail
+entry 33 (bubble generator) and a single pathswapper insertion at retail index
+119 (reference index 118). Forge derives the selective target from retail and
+inserts only that pathswapper. The bubble remains at
+index 33, byte-identical. Removing the inserted entry reproduces every retail
+byte, including all other objects and their order. The target intentionally
+differs from the complete Fixed File.
+
+WFZ1 has exactly one changed byte: the conveyor subtype. Obj72 computes its
+horizontal half-width by masking `$7F`, then shifting a **byte** left four.
+`$90` therefore wraps to zero width, and the unsigned horizontal range test
+always returns. `$09` gives half-width `$90` (288 pixels total), a `$30` vertical
+range, and grounded transport at +2 pixels per update. Retail `$90` also sets
+the high-bit vertical range to `$70`, but its zero horizontal width disables
+transport. The compiled test executes both initializations and proves grounded
+movement for `$09`, no movement for `$90`, and no transport while airborne.
+
+### File hashes and preparation isolation
+
+All names below are under `level/objects/`; references use the same relative
+name under `Utility Project Files/Fixed Files/`.
+
+| File | Retail/reference/target bytes |
+| --- | --- |
+| `EHZ_2.bin` | 948 / 966 / 966 |
+| `ARZ_2.bin` | 1,332 / 1,332 / 1,338 |
+| `WFZ_1.bin` | 942 / 942 / 942 |
+
+SHA-256 locks:
+
+| File/stage | SHA-256 |
+| --- | --- |
+| EHZ2 retail | `7b3384fe361309fd2a36961116bf8d89c22399acb88fa7d632a467cc062c1560` |
+| EHZ2 reference and target | `ba2b2db75688f309847a90172991f151e233d41c272fbd5eb3462f3650c00e5d` |
+| ARZ2 retail | `08f21b09e76d4920e5861d9cdc25329ee304ea69e3171d8551b5c5c729d82297` |
+| ARZ2 reference | `2b52c83cdc3a87bf594292c9a2769c7d99595a04159231ed9879588d6d59f39e` |
+| ARZ2 selective target | `30fea857b2209a2b33f1befec90c446081356a8203f9e665874746bda0720ad2` |
+| WFZ1 retail | `b5afcb63c936ae62d860292a3ec4a7c4e7ff5cb24cf88130e4a6ae231bb737c4` |
+| WFZ1 reference and target | `570e79e93a71296f69f91413b6f615de83c662ab3d6f9e31ff864cc001b9cbab` |
+
+`level_data.py` parses entries, checks both input hashes and the reference
+semantic shape (operation, retail index and old/new entry counts), derives actual
+payloads from that diff, applies only selected reference edits to retail, checks
+the selected payload diff and target hash, and returns validated outputs. Authoritative `apply_policy`
+validates all eight outputs before any write. Every tracked file is hashed
+before and after; only the five existing source/audio files and these three
+object files may change. The dependency and complete Fixed Files reference tree
+stay pristine. No object-entry payload is vendored into Forge, including tests
+and documentation. The independent reconstruction helper separately checks the
+immutable checkout commit and its own input/target hash locks, derives expected
+entries using explicit retail/reference slices and validates all intervening
+unchanged entries. It never imports the production policy, semantic diff or
+transformation result. Reversal uses those independently derived dependency
+entries; the complete frozen pre-level ROM hashes still guard every byte.
+
+CPZ1/2, DEZ1 and OOZ2 remain retail in this task. Every ring file, HTZ leftover
+seesaw, MTZ object cleanup and every other unselected input remain pristine.
+The bubble deletion is rejected. Spin Dash/Credits source transformations and
+their compiled operands remain unchanged; Sky Chase/Death Egg remain excluded.
+`FixMusicAndSFXDataBugs=0`, `FixDriverBugs=0` and
+`ForgeFix2PSpritePageFlip=0` remain enforced. The `$FFF100-$FFF5FF` RAM hole
+and Forge allocations remain unchanged.
+
+### Complete symbol movement and ROM accounting
+
+Both stock and MD+ independently produce this identical movement map:
+
+| Labels | Before -> after | Delta |
+| --- | --- | --- |
+| `Objects_EHZ_1`, `Objects_EHZ_2`, `Off_Objects` | Existing addresses unchanged | 0 |
+| `Objects_MTZ_1` | `$E7534 -> $E7546` | +18 |
+| `Objects_MTZ_2` | `$E79C0 -> $E79D2` | +18 |
+| `Objects_MTZ_3` | `$E7EEE -> $E7F00` | +18 |
+| `Objects_WFZ_1` | `$E8548 -> $E855A` | +18 |
+| `Objects_WFZ_2` | `$E88FC -> $E890E` | +18 |
+| `Objects_HTZ_1` | `$E8902 -> $E8914` | +18 |
+| `Objects_HTZ_2` | `$E8C68 -> $E8C7A` | +18 |
+| `Objects_HPZ_1` | `$E9280 -> $E9292` | +18 |
+| `Objects_HPZ_2` | `$E9394 -> $E93A6` | +18 |
+| `Objects_OOZ_1` | `$E93A0 -> $E93B2` | +18 |
+| `Objects_OOZ_2` | `$E9814 -> $E9826` | +18 |
+| `Objects_MCZ_1` | `$E9C8E -> $E9CA0` | +18 |
+| `Objects_MCZ_2` | `$E9FA0 -> $E9FB2` | +18 |
+| `Objects_CNZ_1` | `$EA31E -> $EA330` | +18 |
+| `Objects_CNZ_2` | `$EA9D8 -> $EA9EA` | +18 |
+| `Objects_CPZ_1` | `$EAFD2 -> $EAFE4` | +18 |
+| `Objects_CPZ_2` | `$EB36E -> $EB380` | +18 |
+| `Objects_DEZ_1` | `$EB830 -> $EB842` | +18 |
+| `Objects_DEZ_2` | `$EB854 -> $EB866` | +18 |
+| `Objects_ARZ_1` | `$EB85A -> $EB86C` | +18 |
+| `Objects_ARZ_2` | `$EBCA4 -> $EBCB6` | +18 |
+| `Objects_SCZ_1` | `$EC1DE -> $EC1F6` | +24 |
+| `Objects_SCZ_2` | `$EC34C -> $EC364` | +24 |
+| `Objects_Null` | `$EC352 -> $EC36A` | +24 |
+| `paddingSoFar`, stock | `$1000FB -> $1000E3` | -24 |
+| `paddingSoFar`, MD+ | `$FFA3B -> $FFA23` | -24 |
+
+There are exactly 24 moved object labels plus the assembly padding counter;
+no added or removed symbols. Restoring those 25 values reproduces each complete
+pre-level symbol-map SHA-256: stock
+`fa3e71943d4f3e2ed5ba99c31fa021f83e6f9356be100fa188a1b2135fcf9625`, MD+
+`8ec6707534a3f112a41e9df92d224f7f58b4eda01eb072616bc297549db6bf3b`.
+All other symbols, including code, sound, Z80, bank targets and RAM, match.
+
+Object entries are uncompressed `BINCLUDE` data with separately emitted
+six-byte `$FFFF,0,0` boundaries. No compressor or compressed asset changes.
+The last boundary ends at `$EC36A` before and `$EC382` after. The existing
+`align $1000` still places `SoundDriverLoad` at `$ED000`: zero padding decreases
+from 3,222 (`$C96`) to 3,198 (`$C7E`) bytes. This absorbs all 24 added bytes.
+ROM size remains 2 MiB; the header ROM end remains `$1FFFFF`.
+
+Each ROM differs from its exact audio baseline in **17,041 bytes**:
+
+| Exhaustive category | Changed bytes | Explanation |
+| --- | --- | --- |
+| `$18E-$18F` | 2 | Recalculated header checksum |
+| `$E6E00-$E6E43` | 35 | 32 moved relative pointer words in the 34-entry table |
+| `$E717A-$EC37D` | 17,004 | Selected edits, shifted pristine entries/boundaries and shorter zero padding |
+
+The two EHZ pointers remain unchanged. Pointer deltas are +18 for layouts
+after EHZ2 through ARZ2, and +24 for SCZ/null. The audit checks all 34 emitted
+words, every compiled object file against its retail/selected input and every
+intervening boundary. It reverses the four insertions and WFZ subtype byte,
+restores pointer words and checksum, then requires the exact complete old ROM:
+stock `869869560951eaad0fc327057e50e8ae3cf4ea04c877ff81e8c22a0b17cc02fa`, MD+
+`b04c2fd39e804719db599cca014966b19f07b16140688ee265c1dc759cb2212b`.
+There are no unexplained bytes. `build/level-data-diff.json` records category
+counts, all movements, file positions/sizes and alignment evidence.
+
+Sound data `$F5100-$107FEB` remain identical. The Forge driver remains 4,011
+compressed / 4,986 loaded bytes, with loaded SHA-256
+`f2883990453ba7deedc682b3970be0d2c73fea99a566a30d43362c2769ac7041`.
+The compressed region/padding hash remains
+`b9788df25eb06f84bacdb03b620c256a72001c533c08770faa7a93826ef985e1`.
+All eight Z80 bank-switch targets and their existing Production/Bugfixed
+relocation audit remain unchanged. Forge remains `$108000-$1086BF`, exclusive
+end `$1086C0`; final sound end remains `$107FEC`. All hooks and RAM allocations
+remain fixed. Only Bugfixed identities and its exact masked-stock digest change.
+The latter is `1e8d2df3382042f15102491dbfa622e5f3ccd3f47f865af83f8c1a69930b87ad`.
+
+### Current identities and software validation
+
+| Build | Size | Checksum | MD5 |
+| --- | --- | --- | --- |
+| Stock Bugfixed | 2,097,152 | `53DB` | `ae378a1f8b41d9e804a0d05cb21f7951` |
+| Bugfixed MD+ | 2,097,152 | `C145` | `50e81d88e257f8d14608e57801b628c5` |
+| Production MD+ | 2,097,152 | `BE41` | `9eb40c0601a7c424a0d1ce168b5f40f2` |
+
+Current SHA-256 identities:
+
+- Stock Bugfixed: `9ff0b7b577de237cf2fe9e13415a943b7d30e228a12b96b851793c95ece7184f`.
+- Bugfixed MD+: `f33a1946a609b8045bb56ffce2aba05196190965fed6ddf5f8eb3b80c52a0c52`.
+- Production MD+: `bd12138cd478596e4d294a06f573a98a6d37747dfe58d726ca62cf50dc3a8c44`.
+
+The Production compatibility symlink retains its existing target. Both variants
+retain 21 adjacent open/write/close MD+ transactions, 42 `$0003F7FA` signatures,
+21 `$0003F7FE` signatures and 21 opens/closes. Startup checksum precedes every
+overlay access, and checksum failure never opens it. PCM/sector/manifest rules
+are unchanged.
+
+Run `tests/check_level_data_binary.py` after all four builds. Its pinned-input
+checks independently exercise pristine/reference/semantic/target failures before
+writes, exact selected placements, capsule/signpost preservation, the retained
+bubble, all exclusions, complete symbol maps and full ROM reconstruction.
+The audio audit first reconstructs the audio baseline, then still reconstructs
+both released v3 ROMs and compares selected data against upstream fixed semantics.
+The README's existing compiled CPU, strict identity, independent stock,
+integration and negative-control checks remain required for both variants.
+
+Validation passed: Ruff, Markdownlint, compileall, all 90 unit tests, manifest
+validation and `git diff --check`; all four stock/MD+ builds; both strict MD+
+profiles; all three backend/handoff/live CPU suites for both variants;
+Production `fixBugs=1` rejection; independent stock and Bugfixed integration
+audits; the five-test selective-audio audit; and the three-test level-data audit.
+A disposable Linux copy included the uncommitted source and new tests, fetched
+the pinned dependency with one `make bootstrap` and reused no dependency,
+prepared-source or ROM outputs. It reproduced all four ROMs byte-for-byte and
+passed the same compiled audits. Existing emulator libraries are tooling
+prerequisites, rather than ROM/source inputs. Audio/packaging code and inputs
+did not change; unit tests still exercise synthetic FFmpeg conversions.
+
+### Research only: CPZ/DEZ doors
+
+All nine differences are Obj2D subtype `$00 -> $02`, **none to `$03`**:
+
+| Layout | Replacement count | Selected status |
+| --- | --- | --- |
+| CPZ1 | 2 | Excluded |
+| CPZ2 | 4 | Excluded |
+| DEZ1 | 3 | Excluded |
+
+Placement payloads and orientation flags remain in the pinned dependency only.
+
+These Fixed Files have no unrelated changes. They cover every Obj2D placement
+in the three layouts. Pinned `Obj2D_Init` instead forces `$03` in CPZ and DEZ
+when `fixBugs=1`. Its comment calls this a hack and says layout replacement
+would allow removing both stores, but its suggested subtype contradicts the
+actual Fixed Files and SonLVL's `$02` CPZ/DEZ default.
+
+Subtype only selects `mapping_frame` in Obj2D; trigger rectangles, collision,
+movement and zone-selected art are independent of it. Frames 2 and 3 emit
+identical 18-byte sprite mappings. A disposable compiled experiment with fixed
+layouts and the two stores removed gives equivalent collision/visual behaviour
+at all nine placements, while preserving frame/subtype `$02` instead of `$03`.
+The changed absolute mappings pointer follows the removed code. Retail data
+without the workaround selects frame 0, the four-piece HTZ mapping, and is
+not visually equivalent. Keeping the workaround with fixed data still forces
+`$03`; it supplies no further behaviour beyond the equivalent mapping here.
+Removal restores generic subtype selection, rather than overriding all future
+CPZ/DEZ doors. Other object logic and zone art selection stay intact.
+
+The experiment removes two six-byte stores: Obj2D's later code/maps and most
+subsequent code advance by -12. Alignment changes the asset shift to -32,
+ring-table shift to -256 and object-table shift to -512. Its loader, sound,
+Z80 and RAM addresses remain fixed; stock remains 2 MiB. This is a broad
+address/pointer change requiring a separate complete audit before adoption,
+including Forge adaptation of that experimental source. No such changes are
+part of the current policy. **Recommendation:** separately approve all nine
+`$02` replacements and retirement of both stores, with independent source,
+binary and hardware audits. Do not follow the stale `$03` comment blindly.
+
+### Research only: OOZ2 push springs and Obj48 distinction
+
+The complete Fixed File changes precisely two entries, both **Obj45**:
+
+| Retail index | Object | Subtype correction | Selected status |
+| --- | --- | --- | --- |
+| 139 | Obj45 push spring | `$30 -> $02` | Excluded |
+| 140 | Obj45 push spring | `$30 -> $02` | Excluded |
+
+Their complete placements and flags are derived from the pinned dependency
+only. Both sit in the later launcher-network section. They are compressible
+push springs, not members of Obj48's controlled ball-transport mechanism.
+
+Pinned Obj45 shifts subtype right three to choose orientation. With the current
+Bugfixed guard, `$30 >> 3 = 6`, masked by 2 gives 2: horizontal routine, frame
+10, width 20. Its strength bit 1 is clear, selecting `-$1000`; X-flip makes it
+launch left. Retail's `$E` mask leaves the invalid table offset 6, which happens
+to branch to horizontal initialization as upstream explains. `$02` selects
+vertical routine, frame 0, width 16, bit 1 set selecting weak `-$A00` upward
+launch, no twirl, no plane change and no transverse-speed cancellation. The
+upper `$30` bits determine orientation here; they are not ignored. Compiled
+initialization confirms both routine/frame/width/strength results. The guard
+already prevents the invalid table lookup but does not provide `$02` behaviour.
+
+Pinned Obj48 and `OOZ/Cannon.xml` do confirm the anticipated names:
+0 = In Top, 1 = In Right, 2 = In Bottom, 3 = In Left. Obj48 masks `$F` for its
+render-property table, derives launch velocity from `(subtype + 1) & 3`
+(subtracting 2 for X-flip), and uses bit 7 for last-cannon release. For a
+hypothetical unflipped Obj48, `$30` acts like 0, with rightward exit;
+`$02` gives leftward exit. Bits 4/5 in `$30` have no further Obj48 effect.
+Those rules do **not** explain the actual Obj45 placements.
+
+Executing pinned KosDec shows both springs just left of a wall beginning at
+X `$1E40`: foreground chunks `$24` and `$26`. The upper placement is beneath
+primary-solid blocks at Y `$0210-$021F`; the lower is above a primary-solid
+floor at Y `$0360`. Geometry supports investigating an upward spring at the
+lower placement, but does not establish a universally safe upward route at
+the upper one, especially across collision planes. Nearby ball-launcher
+directions cannot prove a push-spring correction. No independent official later
+version evidence is available in the pinned checkout/history. **Recommendation:**
+keep this deferred; test a separate Obj45-specific candidate at both placements
+before approving it. Do not justify it as an Obj48 direction-bit correction.
+
+### Targeted level-data MiSTer hardware qualification
+
+Lloyd reported successful targeted testing on **MiSTer FPGA, Mega Drive core
+`26.06.03`**, using the ROM presented as
+`Sonic 2 - Addryu Mega-CD Remix MD+ (Bugfixed) - Level Data Test.md`.
+The generated `build/sonic2-mdplus-bugfixed.md` was independently checked against
+the strict verification profile and existing clean Linux build evidence before
+recording this qualification. Its exact identity is:
+
+- Size: `2,097,152` bytes.
+- Stored and calculated checksum: `C145`.
+- MD5: `50e81d88e257f8d14608e57801b628c5`.
+- SHA-256: `f33a1946a609b8045bb56ffce2aba05196190965fed6ddf5f8eb3b80c52a0c52`.
+
+The reported hardware observations are separate from the source-policy and
+compiled/automated evidence above:
+
+| Targeted check | Reported hardware observation | Result |
+| --- | --- | --- |
+| EHZ2 cave wall (retail index 29) | Wall above the first cave prevented the high rolling-jump wall clip | PASS |
+| EHZ2 wall/spring guard (retail index 64) | Invisible wall prevented the Super Sonic floor clip | PASS |
+| EHZ2 corridor pathswapper (retail index 142) | Lower corridor passed the rare stuck-in-floor/wall check | PASS |
+| EHZ2 boss/capsule | Progression behaved normally | PASS |
+| ARZ2 pathswapper (retail index 119) | Normal loop progression and the problematic approach from below passed | PASS |
+| ARZ2 bubble generator (retail index 33) | Deliberately retained generator behaved normally | PASS |
+| WFZ diagonal conveyor (retail index 127) | Previously non-functional conveyor moved/carried Sonic as intended | PASS |
+
+EHZ2 was exercised normally and aggressively around all three selected areas.
+The WFZ result is for **object `$72`, the diagonal conveyor**, not the later
+vertical platform/conveyor machinery. ARZ2's upstream bubble-generator removal
+is deliberately excluded; this test confirms the retained generator's behaviour.
+
+Regression sanity on the same exact candidate also passed: native SFX over MD+
+music, pause/unpause, MD+ -> temporary native music -> MD+ restoration, and reset.
+No obvious object corruption was observed.
+
+**No hardware regression was observed in the targeted scope. This exact
+`f33a1946...` candidate is now hardware-qualified on MiSTer Mega Drive core
+`26.06.03` for the selected level-data changes and checks reported above.**
+
+The additional qualification evidence chain is:
+
+1. Released v3 `d1668976...` and selective-audio `b04c2fd3...` retain their own
+   exact-ROM hardware evidence. Earlier broad Bugfixed/Forge 1P/2P integration
+   results remain historical evidence for the ROMs actually tested.
+2. Source-policy checks select only the three EHZ2 insertions, ARZ2 pathswapper
+   with its bubble retained, and WFZ diagonal conveyor subtype correction.
+3. Compiled/binary audits account for every changed byte and symbol, reconstruct
+   both complete pre-level ROMs, and establish unchanged unrelated integration
+   machinery; automated suites and clean Linux reproduction pass.
+4. The exact `C145` / `f33a1946...` Level Data Test candidate passed the targeted
+   MiSTer observations above, adding the hardware evidence for these changes.
+
+This is not a new complete Sonic 2 playthrough or a comprehensive retest of every
+previous Bugfixed feature. No adoption or hardware testing of unselected Fixed
+Files is claimed: CPZ/DEZ door replacements, OOZ launcher/push-spring data,
+ARZ2 bubble removal, unrelated object cleanup, ring cleanup and every other
+unselected substitution remain excluded.
 
 ## Post-v3 selective audio-data candidate
 
@@ -217,14 +597,15 @@ Excluded or deferred:
 - **Complete 2P sprite-table page flip:** `ForgeFix2PSpritePageFlip = 0` gates
   all eleven associated conditionals. Alternate tables consume all of
   `$FFF100-$FFF5FF`, reserved for Forge MD+ state.
-- **Upstream Fixed Files:** no replacements are copied, and every other tracked
-  input remains byte-identical. Object/ring/data replacements need individual
-  selection and review.
+- **Upstream Fixed Files:** select only the audited EHZ2, selective ARZ2 and WFZ1
+  object edits above. All other object/ring/data inputs and the complete reference
+  tree remain byte-identical. Further replacements require individual review.
 
 The no-MD+ reference runs upstream `build.lua` without Forge includes. Bugfixed
 MD+ starts from that exact curated source policy, then applies Forge. Production
-continues to prepare pristine `fixBugs = 0` source. Only the two selected
-sound/music source files change; `FixDriverBugs` and `FixMusicAndSFXDataBugs` remain zero.
+continues to prepare pristine `fixBugs = 0` source. In addition to curated game
+code, only the two selected sound/music files and three selected object layouts
+change; `FixDriverBugs` and `FixMusicAndSFXDataBugs` remain zero.
 These exclusions cover music/SFX **data**
 fixes and Z80 driver **logic** fixes. Enabled main-game 68000 fixes can still
 change when or how native sound and music requests are queued, restored,
@@ -324,12 +705,10 @@ their addresses. Alignment absorbs the insertion before MCZ; the ROM remains
 2 MiB. Stock and MD+ were audited independently. The complete compressed Z80
 regions, loaded identities and 34-byte bankswitch analysis remain unchanged.
 
-When Fixed Files are evaluated later, review the CPZ/DEZ door runtime workaround,
-which forces subtype 3, for retirement alongside the object-data corrections.
-The OOZ spring
-runtime guard safely bounds a malformed subtype, while the Fixed File changes
-the spring subtype itself and therefore gameplay. Those two OOZ approaches are
-not equivalent; the future Fixed Files phase must choose deliberately.
+The research-only sections above review the deferred CPZ/DEZ runtime workaround
+and OOZ spring corrections. Doors use `$02` in the actual Fixed Files; the runtime
+forces `$03`. The OOZ guard and the Obj45 data corrections are not equivalent.
+Neither deferred change is part of this level-data candidate.
 
 ### Complete 2P exclusion
 
@@ -499,7 +878,7 @@ its CUE and the complete Production package retain their previous bytes.
 ### Obj82 hardware-test placements
 
 These are all Obj82 entries in the normal pinned `level/objects/ARZ_1.bin`
-and `ARZ_2.bin`, not the excluded Fixed Files replacements. `ChkLoadObj`
+and `ARZ_2.bin`; all Obj82 entries stay pristine within the selective ARZ2 target. `ChkLoadObj`
 loads six-byte entries and masks Y with `$FFF`; each listed ID byte is `$82`.
 `Obj82_Init` selects property byte offset `(subtype >> 3) & $E` and mapping
 frame `offset >> 1`. All entries below select offset 2, frame 1, width `$1C`
@@ -555,7 +934,7 @@ python3 -m tools.mdplus_builder build-stock-bugfixed
 Both stock references use the same dependency checkout. The dedicated
 `tools/mdplus_builder/bugfixed.py` policy creates a disposable clone of committed
 inputs, checks its exact revision and pristine state, then verifies SHA-256
-before changing these five files:
+before changing these five source files and the three object layouts listed above:
 
 | Mutated source file | Pristine SHA-256 |
 | --- | --- |
@@ -569,8 +948,8 @@ The read-only `build.lua` audit requires SHA-256
 `be0f24531604d40159f7b333f9ee7284d15a096ad6bcc3127808b97a2c136175` and the
 expected zero-valued compressed-song setting. Exact contextual patterns and
 occurrence counts reject unexpected structure even after hash validation.
-All tracked files are hashed before and after preparation; only the five
-listed files may change. All five outputs must match explicit post-policy hashes
+All tracked files are hashed before and after preparation; only these eight
+listed inputs may change. All eight outputs must match explicit post-policy hashes
 before any write. The three existing curated hashes stay unchanged. The normal
 Lua build must leave those prepared inputs unchanged too. The immutable dependency checkout is never modified.
 
@@ -590,22 +969,23 @@ The untouched `verify_stock_modern()` audit is unchanged.
 | Field | Stock Bugfixed reference |
 | --- | --- |
 | Size | `2,097,152` bytes |
-| Stored / calculated Mega Drive checksum | `FD6C` / `FD6C` |
-| MD5 | `4cf0dd1f1698c87d2728a071797b1acb` |
-| SHA-256 | `869869560951eaad0fc327057e50e8ae3cf4ea04c877ff81e8c22a0b17cc02fa` |
+| Stored / calculated Mega Drive checksum | `53DB` / `53DB` |
+| MD5 | `ae378a1f8b41d9e804a0d05cb21f7951` |
+| SHA-256 | `9ff0b7b577de237cf2fe9e13415a943b7d30e228a12b96b851793c95ece7184f` |
 
-The curated gameplay policy plus selected audio data establish these constants.
+The curated gameplay, selected audio and selected level data establish these constants.
 Rebuilding from a pristine clone after freezing them, then deleting and recreating the published
 output, reproduced the exact ROM. An independent clean Linux copy fetched the
 pinned source afresh and reproduced all four ROMs byte-for-byte. The policy
 does not adjust padding to obtain a desired identity.
 
-The combined enabled fixes advance the position before the existing loader
-alignment by `$600`, crossing its `$1000` boundary:
+The curated code advances the position before the existing loader alignment by
+`$600`; the selected objects add `$18` more, for a total `$618` advance from
+retail. The same `$1000` boundary is crossed:
 
 | Layout stage | Stock | Curated |
 | --- | --- | --- |
-| Before loader alignment | `$EBD6A` | `$EC36A` |
+| Before loader alignment | `$EBD6A` | `$EC382` |
 | After existing `$1000` alignment | `$EC000` | `$ED000` |
 | Nominal driver end | `$ED04C` | `$EE04C` |
 | DAC start | `$ED100` | `$F5100` |
@@ -825,7 +1205,7 @@ bytes. Its exact curated original footprint is:
 ```
 
 The compressed-length word at `$0ED050` changes from `0f66` (3,942) to `0fab`
-(4,011). The checksum word changes from `FD6C` to `6AD6`; the header ROM end
+(4,011). The checksum word changes from `53DB` to `C145`; the header ROM end
 remains `$001FFFFF`. All other loader bytes remain curated-reference-identical.
 
 ### Forge Z80 identity and complete relocation audit
@@ -877,24 +1257,24 @@ loaded driver hashes, exact backend transactions, handoff digest plus callback,
 and router/routine digests. It requires zero padding after Forge.
 
 The full 2 MiB stock reference with those same spans zeroed hashes to
-`d2213ab11b2010e5fdde06fb797fa092e6104bc0ea338700964f57f409d86cec`.
+`1e8d2df3382042f15102491dbfa622e5f3ccd3f47f865af83f8c1a69930b87ad`.
 The compiled audit also restores actual stock bytes and reproduces the complete
 unmasked curated SHA-256
-`869869560951eaad0fc327057e50e8ae3cf4ea04c877ff81e8c22a0b17cc02fa`.
+`9ff0b7b577de237cf2fe9e13415a943b7d30e228a12b96b851793c95ece7184f`.
 No broad trailing region or gameplay range is ignored. Mutation tests repair
 the header checksum and still require rejection outside and inside these spans.
 
 Bugfixed MD+ identity:
 
 - Size: `2,097,152` bytes.
-- Stored and calculated checksum: `6AD6`.
-- MD5: `ef060d788f896099075e370195120ff2`.
-- SHA-256: `b04c2fd39e804719db599cca014966b19f07b16140688ee265c1dc759cb2212b`.
+- Stored and calculated checksum: `C145`.
+- MD5: `50e81d88e257f8d14608e57801b628c5`.
+- SHA-256: `f33a1946a609b8045bb56ffce2aba05196190965fed6ddf5f8eb3b80c52a0c52`.
 
 The first controlled build and a rebuild from deleted prepared/ROM output
 reproduce this identity. Production remains at checksum `BE41` and SHA-256
 `bd12138cd478596e4d294a06f573a98a6d37747dfe58d726ca62cf50dc3a8c44`.
-Stock Bugfixed remains at checksum `FD6C` and its frozen identity above.
+Stock Bugfixed remains at checksum `53DB` and its frozen identity above.
 
 Both variants retain exactly 21 adjacent open/write/close transactions: 42
 `$0003F7FA` signatures, 21 `$0003F7FE` signatures, 21 opens and 21 closes.

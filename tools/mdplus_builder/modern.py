@@ -94,8 +94,8 @@ VERIFICATION_PROFILES = {
     ),
     # Independently reproduced curated MD+ identity; never rebaseline Production.
     BuildVariant.BUGFIXED: VerificationProfile(
-        2_097_152, "6AD6", "ef060d788f896099075e370195120ff2",
-        "b04c2fd39e804719db599cca014966b19f07b16140688ee265c1dc759cb2212b",
+        2_097_152, "C145", "50e81d88e257f8d14608e57801b628c5",
+        "f33a1946a609b8045bb56ffce2aba05196190965fed6ddf5f8eb3b80c52a0c52",
     ),
 }
 
@@ -584,7 +584,7 @@ LAYOUT_PROFILES = {
         # Relative branches keep all backend/router bytes identical. The only
         # absolute internal pointer is the separately checked ACK callback.
         HANDOFF_SHA256, ROUTER_SHA256, dict(ROUTINE_SHA256),
-        0x200000, "FD6C", "d2213ab11b2010e5fdde06fb797fa092e6104bc0ea338700964f57f409d86cec",
+        0x200000, "53DB", "1e8d2df3382042f15102491dbfa622e5f3ccd3f47f865af83f8c1a69930b87ad",
     ),
 }
 

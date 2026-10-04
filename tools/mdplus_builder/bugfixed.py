@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 
 from .common import BUILD, DEPENDENCIES, SOURCE_MODERN_DIR, BuildError, load_json, require_program, run
+from .level_data import LEVEL_POLICIES, prepare_layouts
 from .source import _clone_at, _git_output, genesis_checksum
 
 AUDITED_COMMIT = "380f37a731bfc720bb0371a35a593184a7ec5e43"
@@ -26,6 +27,7 @@ POST_POLICY_HASHES = {
     'sound/sfx/BC - Spin Dash Release.asm': 'e405419ccfe906a004c02f8f1ca5e4a56eef68b7315f227b6e25bab029be944a',
     'sound/music/9E - Credits.asm': '16a3c7b4e515bbbfc16eb85727dd63d9ff31977b1fb6fcac5868eead1d657843',
 }
+POLICY_HASHES = POST_POLICY_HASHES | {name: p.target_sha256 for name, p in LEVEL_POLICIES.items()}
 # Read-only audit: compressed songs have a separate assembly environment.
 BUILD_LUA_SHA256 = "be0f24531604d40159f7b333f9ee7284d15a096ad6bcc3127808b97a2c136175"
 PAGE_FLIP_FLAG = "ForgeFix2PSpritePageFlip"
@@ -142,9 +144,9 @@ AUDIO_PATTERNS = {
 }
 
 STOCK_BUGFIXED_SIZE = 2_097_152
-STOCK_BUGFIXED_CHECKSUM = "FD6C"
-STOCK_BUGFIXED_MD5 = "4cf0dd1f1698c87d2728a071797b1acb"
-STOCK_BUGFIXED_SHA256 = "869869560951eaad0fc327057e50e8ae3cf4ea04c877ff81e8c22a0b17cc02fa"
+STOCK_BUGFIXED_CHECKSUM = "53DB"
+STOCK_BUGFIXED_MD5 = "ae378a1f8b41d9e804a0d05cb21f7951"
+STOCK_BUGFIXED_SHA256 = "9ff0b7b577de237cf2fe9e13415a943b7d30e228a12b96b851793c95ece7184f"
 
 # Exact context anchors, not a rewrite of arbitrary fixBugs expressions.
 # The two normal VInt upload paths deliberately share one anchor (count 2).
@@ -215,13 +217,14 @@ def apply_policy(work: Path) -> dict[str, str]:
     for name, content in outputs.items():
         if hashlib.sha256(content).hexdigest() != POST_POLICY_HASHES[name]:
             raise BuildError(f"Curated {name} post-policy hash changed")
+    outputs.update(prepare_layouts(work))
     for name, content in outputs.items():
         (work / name).write_bytes(content)
     after = tracked_hashes(work)
     changed = {name for name in before if before[name] != after[name]}
-    if changed != SOURCE_HASHES.keys():
+    if changed != POLICY_HASHES.keys():
         raise BuildError(f"Unexpected curated source changes: {sorted(changed)}")
-    # Every other sound/music/data and Fixed Files input stays pristine.
+    # Every unselected input and the complete Fixed Files reference tree stays pristine.
     return {name: after[name] for name in sorted(changed)}
 
 

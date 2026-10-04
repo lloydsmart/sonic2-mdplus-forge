@@ -22,8 +22,12 @@ or generated MiSTer packages.
   Reuse `apply_policy`;
   do not reconstruct or change the curated policy inside the Forge adapter. Keep Z80
   fixes and global music/SFX fixes off; select only Spin Dash Release and Credits
-  data corrections through the authoritative policy. Exclude Fixed Files and the
-  complete alternate 2P sprite mechanism, and preserve the `$FFF100-$FFF5FF` RAM
+  data corrections through the authoritative policy. Select only the audited EHZ2,
+  selective ARZ2 (retaining its bubble generator) and WFZ1 object corrections
+  from pinned Fixed Files references; exclude all other Fixed Files and the
+  complete alternate 2P sprite mechanism. The exact level-data `f33a1946...`
+  candidate is hardware-qualified on the same core for the targeted scope in
+  `docs/BUGFIXED.md`. Preserve the `$FFF100-$FFF5FF` RAM
   hole and Forge allocations. Audit layout changes independently for both variants.
 - Do not guess loop points. New default-manifest loops require listening tests
   and MiSTer verification across multiple repetitions.
@@ -55,6 +59,8 @@ variants, retaining the Production `fixBugs=1` negative control.
 Build both stock references and run `tests/check_stock_bugfixed_binary.py` after
 both MD+ builds. Keep the stock Bugfixed strict identity and exclusion audits
 independent of the MD+ Bugfixed verification profile.
+Run `tests/check_level_data_binary.py` after all four builds for selected-entry
+semantics, exclusions, complete pre-level ROM reconstruction and symbol movement.
 Audio changes require an FFmpeg conversion test using non-copyrighted
 synthetic input.
 
