@@ -43,6 +43,14 @@ or generated MiSTer packages.
   and the complete alternate 2P sprite mechanism. Preserve the
   `$FFF100-$FFF5FF` RAM hole and Forge allocations. Audit layout changes
   independently for both variants. Keep historical release documents immutable.
+- Both post-v3.0.2 selective Z80 driver proposals are coupled/deferred. The
+  retained `zPlayMusic` call to `zStopSoundEffects` clears SFX priority before
+  the 1-up backup; moving the later clear has no independently observable
+  benefit. The retained full-channel `zInitMusicPlayback` mute already stops
+  PSG noise; adding PSG3 note-off noise shutdown has no demonstrated standalone
+  benefit. Keep both excluded and global `FixDriverBugs=0`. Revisit only with
+  a compiled reachable released-baseline failure; do not adopt their broader
+  prerequisite changes. See the selective driver investigation in `docs/BUGFIXED.md`.
 - Do not guess loop points. New default-manifest loops require listening tests
   and MiSTer verification across multiple repetitions.
 - Preserve the delayed MD+ overlay activation; opening it before Sonic's
@@ -79,6 +87,10 @@ Run `tests/check_door_data_binary.py` for compiled Obj2D behavior, payload-bound
 audit and complete reversal to the frozen released v3.0.1 stock/MD+ identities.
 The previous level/audio audits must reverse the door phase before checking their
 unchanged historical baselines. Keep `docs/releases/v3.0.1.md` frozen.
+Run `tests/check_selective_driver_binary.py` after all four maintained builds.
+It compiles disposable dependency probes with global `FixDriverBugs=0`, proves
+both released masking paths, and checks unchanged complete ROM/driver identities
+and repeated MD+ 1-up restoration. Probes are research inputs, not build variants.
 Audio changes require an FFmpeg conversion test using non-copyrighted
 synthetic input.
 

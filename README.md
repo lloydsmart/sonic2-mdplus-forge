@@ -64,6 +64,13 @@ Released v3.0.2 horizontal behaviour remains authoritative;
 Special Stage results issue #26 remains unrelated/open. See the
 [targeted door results and qualification boundary](docs/BUGFIXED.md#targeted-door-data-mister-hardware-qualification).
 
+The post-v3.0.2 selective Z80 investigation defers both proposed fixes. Retail
+music startup already clears SFX priority before the 1-up backup and fully mutes
+PSG noise. Compiled dependency probes reproduce the upstream faults only after
+removing those retained behaviours. No driver candidate is selected, and all
+four maintained ROMs keep their released identities. See the
+[driver dependency evidence](docs/BUGFIXED.md#post-v302-selective-driver-investigation).
+
 ## What the build does
 
 1. Fetches [`sonicretro/s2disasm`](https://github.com/sonicretro/s2disasm), pinned
@@ -493,6 +500,7 @@ PYTHONPATH=. build/emulation-venv/bin/python tests/check_stock_bugfixed_binary.p
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_audio_data_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_level_data_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_door_data_binary.py
+PYTHONPATH=. build/emulation-venv/bin/python tests/check_selective_driver_binary.py
 ```
 
 The binary suites check the exact production identity and execute compiled
@@ -517,6 +525,14 @@ fixed-data assemblies. The level audit first reconstructs both pre-level ROMs
 exactly, enumerates all symbol movement and verifies every compiled object file,
 pointer and boundary against its selected or pristine input. Generated reports
 and listings remain under ignored `build/`.
+
+The dedicated selective-driver audit compiles six disposable research assemblies
+with global `FixDriverBugs=0`, executes the real loaded drivers, and contrasts
+each isolated fix with its prerequisite. It verifies the complete 1-up backup,
+native restoration and lower-priority splash acceptance, CNZ-to-End-of-Level
+PSG writes, and repeated MD+ duck/restoration. Neither proposal changes the
+maintained source policy or executable output; research outputs are deleted and
+the payload-free report remains in `build/driver-investigation/evidence.json`.
 
 For source-policy changes, run the same reference builds and compiled checks in
 a disposable clean Linux copy, with one `make bootstrap` and no reused build
