@@ -7,6 +7,19 @@ Versioning for its own tooling releases.
 
 ## [Unreleased]
 
+### Changed
+
+- Document the final OOZ2 Obj45 investigation and MiSTer core `26.06.03`
+  comparison at the correct upper/lower placements. Reject the two Fixed Files
+  `$30 -> $02` substitutions: upward vertical behaviour was incorrect at both
+  locations; released horizontal behaviour was judged correct. Discard the
+  earlier test of the wrong springs.
+- Retain retail OOZ2 indices 139/140 and the existing Obj45 guard as project
+  policy. Preserve source/compiled research and rejected candidate identities
+  as historical evidence; remove the candidate implementation and audits.
+  This is documentation/verification work: all four ROMs retain exact released
+  v3.0.2 behaviour and identities, and version remains `3.0.2`.
+
 ## [3.0.2] - 2026-10-04
 
 ### Fixed

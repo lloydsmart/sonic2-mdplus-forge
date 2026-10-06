@@ -57,7 +57,10 @@ The v3.0.0 Obj82-corrected `d1668976...`, intermediate selective-audio
 `b04c2fd3...` and released v3.0.1 level-data `f33a1946...` identities retain their
 own historical hardware evidence. Global music/SFX fixes, Sky Chase/Death Egg
 audio-data changes, Z80 driver fixes, the alternate 2P sprite mechanism and all
-unselected Fixed Files remain excluded. OOZ2 push springs remain deferred;
+unselected Fixed Files remain excluded. The two OOZ2 Obj45 Fixed Files
+replacements were investigated and hardware-tested, then deliberately excluded:
+`$02` produced incorrect vertical behaviour at both actual placements.
+Released v3.0.2 horizontal behaviour remains authoritative;
 Special Stage results issue #26 remains unrelated/open. See the
 [targeted door results and qualification boundary](docs/BUGFIXED.md#targeted-door-data-mister-hardware-qualification).
 
@@ -236,7 +239,11 @@ observation, plausibly related to additional object load but not proven
 stock-normal or reproduced as a door fault, with no evidence linking it to the
 released identity. See the [door audit](docs/BUGFIXED.md#released-v302-cpzdez-door-data)
 and [hardware results and qualification boundary](docs/BUGFIXED.md#targeted-door-data-mister-hardware-qualification).
-OOZ2 stays deferred; Special Stage results issue #26 remains unrelated and open.
+The two OOZ2 Obj45 Fixed Files substitutions were rejected after MiSTer
+testing at the correct placements. Bugfixed retains retail `$30` data and
+the existing Obj45 guard; see the
+[final investigation result](docs/BUGFIXED.md#ooz2-obj45-investigation--hardware-rejected).
+Special Stage results issue #26 remains unrelated and open.
 
 The historical released v3.0.1 Bugfixed MD+ baseline is 2,097,152 bytes,
 checksum `C145`, MD5
