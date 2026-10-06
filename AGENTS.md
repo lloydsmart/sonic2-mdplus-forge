@@ -31,8 +31,15 @@ or generated MiSTer packages.
   its bubble generator) and WFZ1 object corrections from pinned Fixed Files
   references, plus all nine CPZ1/CPZ2/DEZ1 `$02` replacements atomically with
   retirement of both Obj2D runtime `$03` stores. Derive records from the pinned
-  references; never vendor placement payloads. OOZ2 push springs remain excluded
-  and deferred; issue #26 remains unrelated/open. Exclude all other Fixed Files
+  references; never vendor placement payloads. OOZ2 Obj45 retail indices
+  139/140 must retain subtype `$30`; do not adopt the Fixed Files `$02`
+  replacements. MiSTer core `26.06.03` testing at both actual placements
+  found the replacement upward vertical behaviour incorrect and the released
+  horizontal behaviour correct. Retain the existing Obj45 initialization
+  guard unchanged. Revisit these substitutions only with genuinely new
+  evidence; the earlier wrong-spring hardware test was discarded. Released
+  v3.0.2 identities and version remain unchanged. Issue #26 remains
+  unrelated/open. Exclude all other Fixed Files
   and the complete alternate 2P sprite mechanism. Preserve the
   `$FFF100-$FFF5FF` RAM hole and Forge allocations. Audit layout changes
   independently for both variants. Keep historical release documents immutable.

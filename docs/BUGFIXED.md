@@ -30,8 +30,9 @@ evidence; the [v3.0.1 record](releases/v3.0.1.md) remains immutable historical e
 
 Historical preparation, identity and Forge-validation sections below retain their
 released pre-door addresses, hashes and test results. The released v3.0.2 door section
-explicitly describes all current changes to those tables; historical evidence is
-not rewritten as v3.0.2 evidence.
+describes the current changes to those tables. The OOZ2 investigation below
+records a hardware rejection; it adds no maintained ROM changes. Historical
+evidence stays tied to its exact identity.
 
 ## Released v3.0.1 selective level data
 
@@ -279,7 +280,8 @@ both Bugfixed-only runtime `$03` overrides. The exact `0951` / `e9f56f0e...`
 released v3.0.2 identity is **hardware-qualified on MiSTer Mega Drive core
 `26.06.03` for the targeted door-data/runtime-workaround scope and regression
 sanity recorded below**. Version metadata is `3.0.2`; earlier released identities
-and their hardware evidence above remain frozen. OOZ2 remains deferred.
+and their hardware evidence above remain frozen. The later OOZ2
+investigation rejected its two Fixed Files substitutions as recorded below.
 Issue #26 (intermittent Special Stage results text corruption) remains unrelated
 and open; these tests do not establish any result for that issue.
 
@@ -572,48 +574,170 @@ Record all nine doors as pass, fail or not reached, plus music/pause/reset resul
 At checklist preparation, hardware qualification was pending. The completed
 targeted results and their qualification boundary are recorded above.
 
-## Research only: OOZ2 push springs and Obj48 distinction
+## OOZ2 Obj45 investigation — hardware rejected
 
-The complete Fixed File changes precisely two entries, both **Obj45**:
+**The two OOZ2 Obj45 Fixed Files substitutions were hardware-tested at the correct
+placements and rejected. Bugfixed retains released v3.0.2 retail `$30` placement
+data plus the existing Obj45 guard.** The candidate implementation, tests and CI
+changes have been removed; maintained executable inputs match exact `v3.0.2`.
+Version remains `3.0.2`. Revisit these substitutions only with genuinely new
+placement-specific evidence. Issue #26 remains unrelated/open.
 
-| Retail index | Object | Subtype correction | Selected status |
+### Final MiSTer comparison and evidence boundary
+
+Lloyd tested the exact rejected Bugfixed MD+ candidate on MiSTer FPGA, Mega Drive
+core `26.06.03`, against released v3.0.2:
+
+| Image | Stored/calculated checksum | MD5 |
+| --- | --- | --- |
+| Released v3.0.2 comparison | `0951` / `0951` | `5d3e5979d3f110d2761da3166b14b7cf` |
+| Rejected historical test candidate | `08F5` / `08F5` | `66afabb1bc8b801caba3acc712fb81e0` |
+
+SHA-256:
+
+- Released: `e9f56f0efd72844918918f2efdecf6183f5bdabb47f235b61cc511a16942d3b5`.
+- Rejected candidate: `91b3c2d19b4ffe1571321411bbd2c92563f0d74f0f5367de8462b4fe0caa3d57`.
+
+| Correct placement | Released `$30` with guard | Rejected `$02` | Decision |
 | --- | --- | --- | --- |
-| 139 | Obj45 push spring | `$30 -> $02` | Excluded |
-| 140 | Obj45 push spring | `$30 -> $02` | Excluded |
+| Upper, index 139, `$1E34,$0230` | Horizontal; correct | Upward vertical; incorrect | Retain `$30` |
+| Lower, index 140, `$1E34,$0350` | Horizontal; correct | Upward vertical; incorrect | Retain `$30` |
 
-Their complete placements and flags are derived from the pinned dependency
-only. Both sit in the later launcher-network section. They are compressible
-push springs, not members of Obj48's controlled ball-transport mechanism.
+At both placements, the released side-facing horizontal push-spring behaviour
+matched the actual layout and was judged correct. The candidate's upright
+vertical bounce was visibly wrong in context and constituted a gameplay regression.
 
-Pinned Obj45 shifts subtype right three to choose orientation. With the current
-Bugfixed guard, `$30 >> 3 = 6`, masked by 2 gives 2: horizontal routine, frame
-10, width 20. Its strength bit 1 is clear, selecting `-$1000`; X-flip makes it
-launch left. Retail's `$E` mask leaves the invalid table offset 6, which happens
-to branch to horizontal initialization as upstream explains. `$02` selects
-vertical routine, frame 0, width 16, bit 1 set selecting weak `-$A00` upward
-launch, no twirl, no plane change and no transverse-speed cancellation. The
-upper `$30` bits determine orientation here; they are not ignored. Compiled
-initialization confirms both routine/frame/width/strength results. The guard
-already prevents the invalid table lookup but does not provide `$02` behaviour.
+The upper spring is in the narrow recess under the upper shelf, just right of
+the vertically paired round launchers and below the final left-facing launcher.
+The lower spring is directly below, at the foot of the wall, left of the short
+ring row and beneath the Octus ledge. These are Obj45 Push Springs, not Obj48
+round ball/cannon transport objects.
 
-Pinned Obj48 and `OOZ/Cannon.xml` do confirm the anticipated names:
-0 = In Top, 1 = In Right, 2 = In Bottom, 3 = In Left. Obj48 masks `$F` for its
-render-property table, derives launch velocity from `(subtype + 1) & 3`
-(subtracting 2 for X-flip), and uses bit 7 for last-cannon release. For a
-hypothetical unflipped Obj48, `$30` acts like 0, with rightward exit;
-`$02` gives leftward exit. Bits 4/5 in `$30` have no further Obj48 effect.
-Those rules do **not** explain the actual Obj45 placements.
+**An earlier hardware attempt exercised the wrong springs. That result is
+discarded and supplies no evidence for or against the candidate.** Only the
+later comparison at both correctly identified placements supports this decision.
+The test screenshots showed the horizontal/vertical distinction but contain
+copyrighted Sega imagery; they are excluded from the repository and may remain
+only as local evidence under ignored paths. This record claims the reported
+placement comparison, not completion of every former checklist item or a new
+full-game/2P qualification.
 
-Executing pinned KosDec shows both springs just left of a wall beginning at
-X `$1E40`: foreground chunks `$24` and `$26`. The upper placement is beneath
-primary-solid blocks at Y `$0210-$021F`; the lower is above a primary-solid
-floor at Y `$0360`. Geometry supports investigating an upward spring at the
-lower placement, but does not establish a universally safe upward route at
-the upper one, especially across collision planes. Nearby ball-launcher
-directions cannot prove a push-spring correction. No independent official later
-version evidence is available in the pinned checkout/history. **Recommendation:**
-keep this deferred; test a separate Obj45-specific candidate at both placements
-before approving it. Do not justify it as an Obj48 direction-bit correction.
+### Pinned inputs and provenance limits
+
+The pristine and Fixed Files `level/objects/OOZ_2.bin` at pinned dependency commit
+`380f37a731bfc720bb0371a35a593184a7ec5e43` are each 1,140 bytes / 190 records.
+Their SHA-256 values are respectively:
+
+- Pristine: `6f0747f91627814296fa26e3f8d1bb3ec995ea6e1cd36d840532c409cd61a9e9`.
+- Fixed Files: `3e024e0a11be062f0edd84acb2bfac9c1656eac3aabf9553eebbe55c258d275e`.
+
+Only retail indices 139 and 140 differ, both Obj45 Push Spring. The only change
+is subtype `$30 -> $02`, at input offsets 839 and 845. Positions, flags, object
+IDs, order, record count and every other entry are unchanged. No full six-byte
+placement records are stored in Forge source, tests or documentation.
+
+Inspected pinned history identified Obj45 documentation in `2aaf0927`
+(2022-04-19), the initialization guard in `7df7bbc8` (2022-04-20), and the
+Fixed Files introduction in `1fe74ae94d6233b34e4fd10bd8d4282cb1ca8305`
+(2026-06-14). The source comments explain malformed retail initialization and
+allow guard removal after layout replacement. No placement-specific official or
+later-version evidence was found explaining why these springs should launch
+upward. Obj48's direction expression `(subtype + 1) & 3`, X-flip adjustment,
+property mask `$F` and final-release bit 7 do not justify changing Obj45.
+
+### Historical compiled behaviour and continued guard
+
+| Property | Released Bugfixed `$30` | Rejected candidate `$02` |
+| --- | --- | --- |
+| Orientation / routine | Horizontal / 4 | Upward vertical / 2 |
+| Initial mapping frame | 10 | 0 |
+| Display width | 20 | 16 |
+| Stored strength | `-$1000` | `-$A00` |
+| Collision arguments | Width 31; heights 12/13 | Width 27; height 20; compression offset twice frame |
+| Actual launch | Compression-derived X speed; both launch left | Y velocity `-$A00` (10 pixels/frame upward) |
+| Other velocity | Preserves Y | Preserves X |
+| X-flip | Determines horizontal launch sign | Preserved for rendering; does not invert upward launch |
+| Twirl / plane change / transverse cancellation | None | None |
+
+The horizontal code **does not use the stored strength word to launch**.
+At release it moves four pixels toward its original X position, then sets speed
+to `(remaining compression + 10) * $80`, negated for X-flip. The maximum 18-pixel
+compression therefore starts release at 14 remaining pixels, giving `-$C00`
+(12 pixels/frame left). Small compression returns to origin and gives `-$500`
+(5 pixels/frame). Compression moves the spring one pixel per contact step and
+updates frames 10–28; release returns four pixels per step. Vertical compression
+increments frames 0–9 while standing, launches on the next standing update,
+clears standing/on-object and sets airborne, then relaxes one frame per update.
+Neither subtype sets bit 0, bits 2/3 or bit 7, so neither twirls, switches planes
+or clears transverse speed. Obj45 never treats these as Obj48 direction bits.
+
+Retail shifts `$30` right three and masks `$E`, producing table offset 6 outside
+the two-word initialization table. Compiled execution reads the immediate value
+4 from the first horizontal instruction and lands at horizontal initialization
+by accident. Bugfixed's existing `andi.w #2,d0` selects the valid offset 2;
+`$30` still initializes horizontally. `$02` selects valid offset 0. The guard
+prevents the invalid initialization lookup while preserving horizontal behaviour;
+it does not emulate `$02`. It remains **unchanged** in the maintained builds.
+A malformed retail subtype is not proof that the Fixed Files replacement
+is correct for these placements.
+
+Historical candidate compiled tests executed both subtypes at both derived
+placements in stock and MD+, including reconstructed release code, explicit flipped/unflipped controls,
+launch velocities, collision arguments, compression/release, twirl and both
+collision-plane states. Solidity was intercepted at its explicit call boundary;
+standing/pushing inputs were supplied by the test. These tests established spring
+state transitions, not actual traversal or console collision timing.
+
+### Historical geometry findings
+
+Pinned compiled `KosDec` decoded the OOZ2 layout (4,096 bytes), chunks
+(32,768 bytes) and collision index (768 bytes). Both collision-index pointers
+use the OOZ map, but chunk solidity differs by plane. Both springs retain X-flip
+and lie just left of the wall beginning around X `$1E40`.
+
+The upper spring's chunk `$24` has primary-solid overhead blocks at
+Y `$0210-$021F`; the lower spring's chunk `$26` has primary-solid floor at
+Y `$0360`. Those sampled blocks lack secondary solidity. Software geometry
+raised upper-shelf clearance and recovery risks but could not prove a universal
+contradiction across routes and planes. It was inconclusive enough to justify
+testing both actual placements. The later hardware comparison resolved that
+uncertainty in favour of retaining horizontal `$30` behaviour at both springs.
+
+### Rejected historical test identities and software accounting
+
+These identities identify **rejected historical test candidates**, not supported
+builds. Both were 2,097,152 bytes:
+
+| Rejected candidate | Stored/calculated checksum | MD5 |
+| --- | --- | --- |
+| Stock Bugfixed | `9B8B` / `9B8B` | `2757a19b4901b80cf682e6d5fb2fb456` |
+| Bugfixed MD+ | `08F5` / `08F5` | `66afabb1bc8b801caba3acc712fb81e0` |
+
+SHA-256:
+
+- Stock: `ded16d6b1fc9b2bd2390c924b51cb35a1b324002e91d1787d6404b6642568607`.
+- MD+: `91b3c2d19b4ffe1571321411bbd2c92563f0d74f0f5367de8462b4fe0caa3d57`.
+
+The candidate changed only the two subtype bytes at ROM `$0E9B6D` and `$0E9B73`
+and header checksum bytes: three changed bytes in stock, four in MD+.
+There were no layout or symbol movements; all 23,349 stock and 23,467 MD+ parsed
+symbol entries retained their released values. Independent inverse reconstruction
+returned exact released v3.0.2 identities:
+
+- Stock: `909e5f229fc4052f3c3c3c9a97c3a6b345117990796b0226dffbc98f88f00bc7`.
+- MD+: `e9f56f0efd72844918918f2efdecf6183f5bdabb47f235b61cc511a16942d3b5`.
+
+The prior candidate investigation recorded 212 passing tests in both the working
+checkout and a disposable clean Linux copy: the released 202-test suite plus
+ten candidate-only OOZ2 tests. It recorded exact four-ROM reproduction, strict
+profiles, pinned-input/compiled/geometry checks, asset-boundary scans, and
+mutation controls for the independent inverse. This remains historical software
+evidence and does not override the hardware rejection. The candidate-only files
+and OOZ2 reversal additions to older audits have been removed. Maintained audits
+again operate directly on released v3.0.2; the full maintained suite is 202 tests.
+No new clean Linux reproduction is claimed by this documentation-only unwind.
+
+The following qualification record applies to released v3.0.1.
 
 ### Targeted level-data MiSTer hardware qualification
 
@@ -989,8 +1113,10 @@ regions, loaded identities and 34-byte bankswitch analysis remain unchanged.
 The historical v3.0.1 policy deferred both CPZ/DEZ door-data adoption and OOZ
 spring corrections. Doors use `$02` in the actual Fixed Files; v3.0.1 forced
 `$03` at runtime. v3.0.2 selects the door data and retires both stores as recorded
-above. The OOZ guard and Obj45 data corrections are not equivalent; OOZ2 remains
-deferred. Neither data substitution was part of v3.0.1.
+above. The OOZ guard and Obj45 data substitutions are not equivalent; hardware
+testing subsequently rejected the two OOZ2 Fixed Files replacements. Retail
+`$30` and the existing guard remain authoritative. Neither data substitution
+was part of v3.0.1.
 
 ### Complete 2P exclusion
 
