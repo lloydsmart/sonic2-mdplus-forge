@@ -34,6 +34,216 @@ describes the current changes to those tables. The OOZ2 investigation below
 records a hardware rejection; it adds no maintained ROM changes. Historical
 evidence stays tied to its exact identity.
 
+## Post-v3.0.2 selective driver investigation
+
+**Decision: both proposals are investigated but coupled/deferred. Neither is
+selected, released as a new fix, or hardware-qualified as a driver candidate.**
+The request's standalone gate also rules out Candidate A: its advertised fault
+does not reproduce with the retained retail startup workaround. Removing either
+prerequisite would expand the authorised scope. Global `FixDriverBugs=0`, all
+released gameplay/data decisions, the post-release OOZ2 rejection, Forge code,
+21 transactions, RAM allocations and version `3.0.2` remain unchanged. Issue #26
+remains unrelated/open; historical release records are untouched.
+
+### Candidate A: 1-up SFX-priority clear ordering
+
+The pinned upstream `s2.sounddriver.asm`, SHA-256
+`ff34692c633f96d50073c24f6ebb72df5c739892c31be6b19b2ae604e76232c7`,
+contains a four-byte `XOR A; LD (SFXPriorityVal),A` before backup under
+`if FixDriverBugs`, and the same clear after backup under `if ~~FixDriverBugs`.
+The curated source's complete SHA-256 remains
+`ce96d9dda766fefa33de23ddccea373b58aceb92ec2a91fba30d998105d667a8`;
+its sole policy transformation is still `FixDriverBugs = fixBugs` to `0`.
+The Forge adapter retains these decisions without recreating a selective fix.
+
+The compiled stock Bugfixed sequence is:
+
+| Address | Instructions / bytes | Effect |
+| --- | --- | --- |
+| `$073D` | `F5 CD 3C 0A F1` | `PUSH AF; CALL zStopSoundEffects; POP AF` |
+| `$0A3C` | `AF 32 80 1B` | Stop-SFX entry clears priority at `$1B80` |
+| `$076E` | `11 38 1E 21 80 1B 01 BC 01 ED B0` | Copy `$1BC` bytes to save state |
+| `$0779` | `3E 80 32 91 1B` | Set live 1-up-playing flag |
+| `$077E` | `AF 32 80 1B` | Retail's later priority clear |
+
+The upstream selected order is the four-byte clear, the eleven-byte backup,
+then the five-byte 1-up flag store. Moving the clear is size-neutral: a complete
+disposable A-only stock assembly remains 4,872 loaded / 3,942 compressed bytes.
+All 18 changed loaded bytes lie in `$076E-$0781`, and rotating those twenty
+bytes back recovers the complete released loaded driver. This instruction move
+alone supplies no new behaviour under the current policy.
+
+The actual copied range is `$1B80-$1D3B` to `$1E38-$1FF3`: **444 bytes**, comprising
+24 variable bytes and ten 42-byte song tracks (DAC, FM1–6 and PSG1–3). It excludes
+the six SFX tracks and Forge ACK at `$1FF4`. The source comment's “36 bytes” is
+historical; the assembled structure contains 24. Variable offsets are:
+
+| Offset | Saved state |
+| --- | --- |
+| `$00` | `SFXPriorityVal` |
+| `$01-$02` | `TempoTimeout`, `CurrentTempo` |
+| `$03` | `StopMusic` |
+| `$04-$05` | `FadeOutCounter`, `FadeOutDelay` |
+| `$06-$07` | `Communication`, `DACUpdating` |
+| `$08-$0B` | `QueueToPlay`, `Queue0`, `Queue1`, `Queue2` |
+| `$0C-$0D` | `VoiceTblPtr` |
+| `$0E-$10` | `FadeInFlag`, `FadeInDelay`, `FadeInCounter` |
+| `$11` | `1upPlaying` |
+| `$12-$14` | `TempoMod`, `TempoTurbo`, `SpeedUpFlag` |
+| `$15-$17` | `DACEnabled`, `MusicBankNumber`, `IsPalFlag` |
+
+`cfFadeInToPrevious` executes the reverse eleven-byte copy
+`21 38 1E 11 80 1B 01 BC 01 ED B0`. If priority `$70` reached the backup, the
+late clear would affect only live state. Restore would copy `$70` back, and
+`zCycleQueue`'s unsigned `CP C; JR C` would reject a splash request at `$68`.
+Equal-priority requests pass. Jump has priority `$80` and its negative-priority
+special case does not persist that value, so it is an unsuitable low-priority
+probe; ring, roll, spring and flipper are all `$70`.
+
+**That conditional explanation is not a released-v3.0.2 reproduction.** The
+retained five-byte stop-SFX prologue already clears priority before any backup.
+The upstream bundle removes this workaround, which is the prerequisite for the
+stale-priority failure here. The full compiled round-trip evidence is:
+
+| Disposable execution path | Saved / restored priority | Splash `$AA`, priority `$68` |
+| --- | --- | --- |
+| Released stock Bugfixed | `$00 / $00` | Accepted |
+| Released Bugfixed MD+ | `$00 / $00` | Accepted |
+| A-only, retained stop-SFX call | `$00 / $00` | Accepted |
+| Stop-SFX prologue removed, retail late clear | `$70 / $70` | Rejected |
+| Stop-SFX prologue removed, A clear before backup | `$00 / $00` | Accepted |
+
+All paths establish `$70` through a real compiled ring request. The native
+jingle restores after 211 test VInts; SFX remain intentionally suppressed during
+the native restore fade for another 121 VInts. Tests wait for that gate to open
+before attributing rejection to priority. These are harness observations, not
+an audible timing qualification. The released stock and MD+ backup tests compare
+all 444 bytes at the actual compiled `LDIR`, without seeding a fake stale save.
+
+The simplest source-backed game diagnostic is **ARZ, 99th ring → 100th ring
+extra life → water-entry splash**. `CollectRing_1P` replaces the threshold ring
+sound with `$98`; it does not play both, so the preceding ring establishes `$70`.
+The dedicated audit executes both ring-collection calls through the compiled
+68000 code and native Z80 queue, then checks zero saved/restored priority and
+splash acceptance. Debug/Level Select can shorten setup; no complete playthrough
+is needed. There is no supported A-only hardware candidate because the standalone
+gate failed.
+
+### Candidate B: PSG3 note-off also mutes noise
+
+Retail `zPSGNoteOff` has compiled bytes
+`DD CB 00 56 C0 DD 7E 01 F6 1F 32 11 7F C9`: respect the SFX-override flag,
+write `VoiceControl | $1F` to PSG, return. PSG3 tone (`$C0`) therefore writes
+`$DF`; a noise track (`$E0`) already writes `$FF`. The upstream fixed branch
+adds `FE DF C0 3E FF 32 11 7F` before the final return: compare with `$DF`, return
+unless PSG3, otherwise write `$FF`. The override guard remains effective.
+
+Current `zInitMusicPlayback` saves selected variables, clears music state,
+restores those variables and calls `zFMSilenceAll`, then jumps to
+`zPSGSilenceAll`. The latter writes **`$9F, $BF, $DF, $FF`**, muting all four
+PSG channels. The upstream fixed final branch instead initializes voice-control
+bytes for every music channel and returns, relying on `zSFXFinishSetup` to mute
+channels individually. That no longer guarantees noise shutdown when a former
+noise track becomes the default PSG3 tone track. Upstream's complete fixed init
+also has separate Queue2 preservation changes; those are not selected even in
+the dependency probe, which changes only the final channel-initialization branch.
+
+The actual CNZ noise stream becomes active after 88 harness VInts. Starting
+End-of-Level then produces:
+
+| Compiled path | PSG writes at song transition | Noise muted? |
+| --- | --- | --- |
+| Released stock / MD+ driver | `9F BF DF FF 9F BF DF` | Yes |
+| B-only, retained retail init | `9F BF DF FF 9F BF DF FF` | Yes; redundant `$FF` |
+| Upstream final init branch, retail note-off | `9F BF DF` | No |
+| Upstream final init branch plus B | `9F BF DF FF` | Yes |
+
+The missing noise write reproduces only with the broader final music-init
+change. PSG3 SFX initialization independently writes `$DF, $FF` before taking
+the channel; native noise tracks already stop through their `$E0` voice byte.
+The Forge native-noise → MD+ handoff likewise emits `$FF` with the unchanged
+note-off routine. Noise mode changes within tracks set `$E0`; resetting to a
+fresh tone track goes through initialization or the SFX setup silence. No
+independently reachable benefit was established for B under the retained policy.
+**B is deferred; the broader music-init prerequisite is not implemented.**
+
+The disposable B-only build grows by eight instruction bytes plus seven bytes
+of audited one-byte-table alignment, from 4,872 to 4,887 loaded bytes and 3,942
+to 3,946 compressed bytes. Upstream explicitly warns about that seven-byte
+alignment; the research audit expects exactly that warning and validates its
+complete assembled segment against both decompression paths and the actual
+68000 loader. This unsupported probe is never passed off as a maintained build.
+Its output is deleted with the disposable source; no layout mask is broadened.
+
+### Verification, identities and optional hardware diagnostics
+
+`tests/check_selective_driver_binary.py` adds 14 compiled tests and six disposable
+research assemblies. Every probe keeps global `FixDriverBugs=0`; only the named
+conditional bodies differ. The audit verifies complete pinned/prepared source,
+exact before/after instructions, full backup bytes, dependency failure/repair,
+ordinary lower-priority SFX, PSG writes, unchanged complete ROM/loaded-driver
+identities and three repeated MD+ 1-up transitions. Normal MD+ level ownership
+persists during a native jingle: Forge ducks the external stream rather than
+switching its owner byte. The test observes 255 `$1519` duck commands followed
+by `$15FF`, silent restored native level tracks and accepted splash SFX without
+a track restart or an ownership change. This is compiled protocol evidence;
+audible mixing and FPGA bus timing remain outside the CPU harness.
+
+There are **zero changed bytes** in any maintained ROM or loaded/compressed
+driver, zero ROM/bankswitch relocation and no newly selected source transform.
+Inverse reconstruction is the identity operation and matches both complete
+released v3.0.2 SHA-256 values exactly, without masks or checksum substitutions.
+Production and its compatibility symlink remain exact. The unchanged Bugfixed
+identities are recorded here to prevent mistaking research probes for candidates:
+
+| Identity | Stock Bugfixed | Bugfixed MD+ |
+| --- | --- | --- |
+| Size | 2,097,152 | 2,097,152 |
+| Header/calculated checksum | `9BE7` | `0951` |
+| MD5 | `bd93d95a110be99e9eb9bafb3d31806f` | `5d3e5979d3f110d2761da3166b14b7cf` |
+| Compressed / loaded Z80 | 3,942 / 4,872 | 4,011 / 4,986 |
+
+Complete SHA-256 identities:
+
+- Stock: `909e5f229fc4052f3c3c3c9a97c3a6b345117990796b0226dffbc98f88f00bc7`.
+- MD+: `e9f56f0efd72844918918f2efdecf6183f5bdabb47f235b61cc511a16942d3b5`.
+
+Optional **MiSTer core `26.06.03` baseline diagnostics**, not candidate qualification:
+
+1. Confirm an exact released identity above; use Level Select/Debug to prepare
+   98 rings near ARZ water, then collect the 99th and 100th in quick succession.
+   Hear the first ring and native 1-up, observe the life increment, allow native
+   fade/MD+ level-volume restoration to finish, then enter/leave water. Expect
+   ordinary splash SFX; avoid jumping or other equal/higher-priority effects
+   between the jingle and splash, since they could conceal a hypothetical stale
+   priority. Repeat the transition using the 199th/200th ring pair if convenient.
+2. In **stock Bugfixed**, use Level Select/Debug to reach the CNZ signpost after
+   its native noise percussion is audible. Expect normal End-of-Level music with
+   no residual CNZ noise.
+   Ordinary MD+ CNZ uses external audio and cannot establish this native-noise
+   prerequisite; do not claim that as an equivalent B test.
+3. Under Bugfixed MD+, confirm ARZ ducks for the native 1-up, returns to normal
+   volume without restarting the level track, and ordinary splash SFX work after
+   the native restore fade. Repeat once and confirm pause/unpause and soft reset.
+
+No driver candidate is prepared for RetroNAS deployment. Reopening either
+proposal requires genuinely new evidence of a reachable released-baseline
+fault, separate authorization for any broader prerequisite, and then exact
+binary audit, clean reproduction and hardware qualification. The current work
+changes tests, CI and current-development documentation only; a fresh disposable
+Linux reproduction is not required by the executable-change gate and is not
+claimed here. Generated logs and payload-free evidence remain under
+`build/driver-investigation/`.
+
+Working-checkout validation passed all 202 maintained tests (92 unit and 110
+compiled binary/CPU tests) plus the 14 new driver tests: **216 tests total**.
+All four maintained ROM builds, both strict MD+ verifiers, Production identity
+and source pin, both variants' three CPU suites, the Production `fixBugs=1`
+negative control, stock Bugfixed, integration, selective audio, level data and
+door data audits passed. Ruff, Markdownlint, compileall, default-manifest
+validation and `git diff --check` also passed. No commit, push, merge, tag,
+publication or RetroNAS deployment was performed.
+
 ## Released v3.0.1 selective level data
 
 Version 3.0.1 freezes the post-v3 selective audio and level-data work. The level

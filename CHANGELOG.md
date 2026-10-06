@@ -9,6 +9,12 @@ Versioning for its own tooling releases.
 
 ### Changed
 
+- Investigate the two selective Z80 driver proposals with a dedicated compiled
+  dependency audit. Defer both: retained stop-SFX startup clears priority before
+  the 1-up backup, and retained full-channel music-init silence already mutes
+  PSG noise. Faults reproduce only after broader prerequisite changes. Add CI
+  coverage and document concrete diagnostics; keep global `FixDriverBugs=0`,
+  all four released ROM identities, existing curated policy and version `3.0.2`.
 - Document the final OOZ2 Obj45 investigation and MiSTer core `26.06.03`
   comparison at the correct upper/lower placements. Reject the two Fixed Files
   `$30 -> $02` substitutions: upward vertical behaviour was incorrect at both

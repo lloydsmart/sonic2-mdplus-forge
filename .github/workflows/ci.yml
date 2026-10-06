@@ -97,3 +97,5 @@ jobs:
         run: PYTHONPATH=. python tests/check_level_data_binary.py
       - name: Audit post-v3.0.1 door data, relocation and compiled behavior
         run: PYTHONPATH=. python tests/check_door_data_binary.py
+      - name: Audit deferred selective Z80 driver fixes and their dependency gates
+        run: PYTHONPATH=. python tests/check_selective_driver_binary.py
