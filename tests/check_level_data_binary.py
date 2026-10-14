@@ -137,8 +137,8 @@ class LevelDataBinaryTests(unittest.TestCase):
                 source_name = f'level/objects/{name}.bin'
                 retail = (modern.SOURCE_MODERN_DIR / source_name).read_bytes()
                 prepared = (BuildVariant.BUGFIXED.prepared_dir / source_name).read_bytes()
-                if name in DOORS:
-                    # This historical audit operates after reversing the door phase.
+                if name in DOORS or name == 'MTZ_3':
+                    # This historical audit operates after reversing MTZ3 and doors.
                     prepared = retail
                 new_address = symbols['Objects_' + name]
                 self.assertEqual(baseline[old_address:old_address + len(retail)], retail)

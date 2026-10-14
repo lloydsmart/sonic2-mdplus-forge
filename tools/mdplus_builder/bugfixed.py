@@ -178,9 +178,9 @@ AUDIO_PATTERNS = {
 }
 
 STOCK_BUGFIXED_SIZE = 2_097_152
-STOCK_BUGFIXED_CHECKSUM = "9BE7"
-STOCK_BUGFIXED_MD5 = "bd93d95a110be99e9eb9bafb3d31806f"
-STOCK_BUGFIXED_SHA256 = "909e5f229fc4052f3c3c3c9a97c3a6b345117990796b0226dffbc98f88f00bc7"
+STOCK_BUGFIXED_CHECKSUM = "DB7E"
+STOCK_BUGFIXED_MD5 = "4cef9ef59c6342d9c49b5352eb9789d7"
+STOCK_BUGFIXED_SHA256 = "effa6c09e2f33773165fdd255fc9f0b334dbdd8ed7df2830889b8b8aea265233"
 
 # Exact context anchors, not a rewrite of arbitrary fixBugs expressions.
 # The two normal VInt upload paths deliberately share one anchor (count 2).

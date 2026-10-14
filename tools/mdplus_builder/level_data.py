@@ -66,7 +66,14 @@ EHZ_SHAPES = (
 )
 ARZ_PATH_SHAPE = ('insert', 119, 0, 1)
 WFZ_SHAPE = ('replace', 127, 1, 1)
+MTZ3_SHAPES = tuple(('delete', index, 1, 0) for index in (53, 100, 217, 230, 233))
 LEVEL_POLICIES = {
+    # Post-v3.0.2 cleanup candidate; scoped MD+ hardware evidence in docs/BUGFIXED.md.
+    'level/objects/MTZ_3.bin': LevelPolicy(
+        '9d64fd5640ec834d4814ace9c7e87955316ad3ed95e1ba37a287e439bdaae157',
+        'ab3f9ea828c0e781797beaba3570aab55df93838afeb6b51e6131bb660930372',
+        'ab3f9ea828c0e781797beaba3570aab55df93838afeb6b51e6131bb660930372',
+        MTZ3_SHAPES, MTZ3_SHAPES),
     'level/objects/EHZ_2.bin': LevelPolicy(
         '7b3384fe361309fd2a36961116bf8d89c22399acb88fa7d632a467cc062c1560',
         'ba2b2db75688f309847a90172991f151e233d41c272fbd5eb3462f3650c00e5d',

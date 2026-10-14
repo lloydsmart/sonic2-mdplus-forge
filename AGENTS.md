@@ -38,8 +38,19 @@ or generated MiSTer packages.
   horizontal behaviour correct. Retain the existing Obj45 initialization
   guard unchanged. Revisit these substitutions only with genuinely new
   evidence; the earlier wrong-spring hardware test was discarded. Released
-  v3.0.2 identities and version remain unchanged. Issue #26 remains
-  unrelated/open. Exclude all other Fixed Files
+  v3.0.2 identities remain frozen. Current development selects the
+  post-v3.0.2 MTZ3 cleanup candidate: derive only
+  five deletions at retail indices 53/100/217/230/233 from hash-checked pinned
+  MTZ_3 inputs, preserving every survivor. Stock candidate checksum `DB7E`,
+  SHA-256 `effa6c09e2f33773165fdd255fc9f0b334dbdd8ed7df2830889b8b8aea265233`;
+  MD+ candidate checksum `48E8`, SHA-256
+  `087812de2869e2976627e8bf83d60c6a7b47aad635c16691dc48748e711eb48c`.
+  The exact MD+ candidate is hardware-qualified on original MiSTer FPGA for
+  normal MTZ3 progression including boss/exit and inspection of all five affected
+  placement regions, with no observed issues. Coverage is not exhaustive; see
+  `docs/BUGFIXED.md`. The stock candidate has no hardware qualification.
+  Version remains `3.0.2`.
+  Issue #26 remains unrelated/open. Exclude all other Fixed Files
   and the complete alternate 2P sprite mechanism. Preserve the
   `$FFF100-$FFF5FF` RAM hole and Forge allocations. Audit layout changes
   independently for both variants. Keep historical release documents immutable.
@@ -85,8 +96,12 @@ Run `tests/check_level_data_binary.py` after all four builds for selected-entry
 semantics, exclusions, complete pre-level ROM reconstruction and symbol movement.
 Run `tests/check_door_data_binary.py` for compiled Obj2D behavior, payload-boundary
 audit and complete reversal to the frozen released v3.0.1 stock/MD+ identities.
-The previous level/audio audits must reverse the door phase before checking their
-unchanged historical baselines. Keep `docs/releases/v3.0.1.md` frozen.
+Run `tests/check_mtz3_data_binary.py` for independent pinned deletion semantics,
+compiled object/terrain evidence, asset boundaries and every changed byte/symbol;
+its complete inverse must recover both exact released v3.0.2 Bugfixed identities.
+The older door/level/audio and selective-driver audits must reverse the MTZ3
+phase first; level/audio then reverse doors to their unchanged historical
+baselines. Keep `docs/releases/v3.0.1.md` frozen.
 Run `tests/check_selective_driver_binary.py` after all four maintained builds.
 It compiles disposable dependency probes with global `FixDriverBugs=0`, proves
 both released masking paths, and checks unchanged complete ROM/driver identities

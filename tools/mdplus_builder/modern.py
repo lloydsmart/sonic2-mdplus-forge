@@ -92,10 +92,10 @@ VERIFICATION_PROFILES = {
     BuildVariant.PRODUCTION: VerificationProfile(
         PREPARED_ROM_SIZE, PRODUCTION_CHECKSUM, PRODUCTION_MD5, PRODUCTION_SHA256,
     ),
-    # Independently reproduced curated MD+ identity; never rebaseline Production.
+    # Post-v3.0.2 MTZ3 candidate; scoped MD+ hardware evidence in docs/BUGFIXED.md.
     BuildVariant.BUGFIXED: VerificationProfile(
-        2_097_152, "0951", "5d3e5979d3f110d2761da3166b14b7cf",
-        "e9f56f0efd72844918918f2efdecf6183f5bdabb47f235b61cc511a16942d3b5",
+        2_097_152, "48E8", "55ed43f9caa34773d5a17a2854cfe2d2",
+        "087812de2869e2976627e8bf83d60c6a7b47aad635c16691dc48748e711eb48c",
     ),
 }
 
@@ -584,7 +584,7 @@ LAYOUT_PROFILES = {
         # Relative branches keep all backend/router bytes identical. The only
         # absolute internal pointer is the separately checked ACK callback.
         HANDOFF_SHA256, ROUTER_SHA256, dict(ROUTINE_SHA256),
-        0x200000, "9BE7", "87d7102c04607783e2f6b4af02800bb0dd008e9beb1bdbae297a02610198882c",
+        0x200000, "DB7E", "b4655959a5c5b2b406b8f53d8421dc79838c657d827544cd6f1ef825ea707db9",
     ),
 }
 

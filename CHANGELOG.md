@@ -9,6 +9,17 @@ Versioning for its own tooling releases.
 
 ### Changed
 
+- Add a post-v3.0.2 MTZ3 cleanup candidate, hardware-qualified on original
+  MiSTer FPGA for a normal MTZ3 playthrough including boss/exit and inspection
+  of all five affected placement regions, with no observed issues.
+  Derive exactly five leftover/misplaced deletions from hash-checked pinned
+  Fixed Files; retain every surviving record and all existing policy decisions.
+  Freeze independent candidate identities, account for all 14,889 changed bytes
+  and 22 symbol movements per Bugfixed ROM, and reconstruct both exact released
+  v3.0.2 images. Add source, compiled-object, terrain and asset-boundary audits.
+  Production and version `3.0.2` remain unchanged; no player-visible improvement
+  or exhaustive path/collision coverage is claimed. See the scoped hardware
+  record in `docs/BUGFIXED.md`.
 - Investigate the two selective Z80 driver proposals with a dedicated compiled
   dependency audit. Defer both: retained stop-SFX startup clears priority before
   the 1-up backup, and retained full-channel music-init silence already mutes

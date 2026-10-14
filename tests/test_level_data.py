@@ -11,6 +11,30 @@ from tools.mdplus_builder.level_data import LEVEL_POLICIES, LevelPolicy, parse_o
 
 
 class LevelDataPolicyTests(unittest.TestCase):
+    def test_multiple_deletions_keep_retail_indices_and_survivor_order(self):
+        name = 'level/objects/MTZ_3.bin'
+        # Synthetic entries; no game data. Deletions use original indices even
+        # when earlier removals would change the current list position.
+        records = tuple(i.to_bytes(2, 'big') + bytes((0xEE, 0xDD, 0xEE, i)) for i in range(12))
+        pristine = b''.join(records)
+        indices = (1, 3, 6, 8, 10)
+        reference = b''.join(r for i, r in enumerate(records) if i not in indices)
+        shapes = tuple(('delete', i, 1, 0) for i in indices)
+        policy = LevelPolicy(
+            *(hashlib.sha256(x).hexdigest() for x in (pristine, reference, reference)), shapes, shapes)
+        with patch.dict(LEVEL_POLICIES, {name: policy}):
+            self.assertEqual(transform_layout(pristine, reference, name), reference)
+        for field, value, message in (
+            ('reference_shapes', shapes[:-1], 'reference semantic'),
+            ('selected_shapes', shapes[:-1], 'post-policy hash'),
+            ('selected_shapes', shapes[::-1], 'selected reference shapes'),
+            ('pristine_sha256', '0' * 64, 'pristine hash'),
+            ('reference_sha256', '0' * 64, 'reference hash'),
+        ):
+            with (patch.dict(LEVEL_POLICIES, {name: replace(policy, **{field: value})}),
+                  self.assertRaisesRegex(BuildError, message)):
+                transform_layout(pristine, reference, name)
+
     def test_entry_coordinates_flags_id_and_subtype(self):
         # Artificial values exercise all decoded fields, including the ID mask.
         entry, = parse_objects(bytes.fromhex('0123a456de7f'))
@@ -23,8 +47,9 @@ class LevelDataPolicyTests(unittest.TestCase):
     def test_only_approved_files_are_selected(self):
         self.assertEqual(set(LEVEL_POLICIES), {
             'level/objects/EHZ_2.bin', 'level/objects/ARZ_2.bin', 'level/objects/WFZ_1.bin',
-            'level/objects/CPZ_1.bin', 'level/objects/CPZ_2.bin', 'level/objects/DEZ_1.bin'})
-        for name in ('OOZ_2', 'HTZ_1', 'MTZ_3'):
+            'level/objects/CPZ_1.bin', 'level/objects/CPZ_2.bin', 'level/objects/DEZ_1.bin',
+            'level/objects/MTZ_3.bin'})
+        for name in ('OOZ_2', 'HTZ_1'):
             with self.assertRaisesRegex(BuildError, 'Unselected'):
                 transform_layout(b'', b'', f'level/objects/{name}.bin')
         with self.assertRaisesRegex(BuildError, 'Unselected'):
