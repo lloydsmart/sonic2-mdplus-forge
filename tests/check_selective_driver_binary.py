@@ -16,6 +16,7 @@ from pathlib import Path
 from check_modern_live_binary import LiveMachine
 from check_stock_bugfixed_binary import driver
 from cpu_machine import Machine
+from mtz3_data_evidence import restore_v302
 
 from tools.mdplus_builder import bugfixed, modern
 from tools.mdplus_builder.common import BUILD, SOURCE_MODERN_DIR
@@ -222,7 +223,9 @@ class SelectiveDriverBinaryTests(unittest.TestCase):
 
     def test_complete_rom_and_driver_identities_unchanged(self):
         for kind in ('stock', 'mdplus'):
-            rom, symbols = self.images[kind]
+            candidate, current_symbols = self.images[kind]
+            rom, symbols = restore_v302(candidate, current_symbols, kind)
+            self.assertEqual(driver(candidate, current_symbols), driver(rom, symbols))
             checksum, md5, sha, packed_size, loaded_size, loaded_sha = RELEASED[kind]
             packed, loaded = driver(rom, symbols)
             self.assertEqual(len(rom), 2_097_152)
@@ -233,7 +236,7 @@ class SelectiveDriverBinaryTests(unittest.TestCase):
             self.assertEqual(bytes(self.machine(kind).z80.memory[:len(loaded)]), loaded)
             self.report[kind] = {'sha256': sha, 'packed_bytes': packed_size, 'loaded_bytes': loaded_size,
                                  'loaded_sha256': loaded_sha, 'changed_ROM_bytes': 0,
-                                 'inverse': 'identity: no newly selected transformation'}
+                                 'inverse': 'MTZ3 reversed first; driver inverse remains identity'}
         modern.verify_modern(BuildVariant.PRODUCTION.rom_path, strict_regression=True)
         modern.verify_stock_modern(modern.STOCK_MODERN_ROM_PATH)
 

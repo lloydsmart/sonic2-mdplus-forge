@@ -67,9 +67,19 @@ Special Stage results issue #26 remains unrelated/open. See the
 The post-v3.0.2 selective Z80 investigation defers both proposed fixes. Retail
 music startup already clears SFX priority before the 1-up backup and fully mutes
 PSG noise. Compiled dependency probes reproduce the upstream faults only after
-removing those retained behaviours. No driver candidate is selected, and all
-four maintained ROMs keep their released identities. See the
+removing those retained behaviours. No driver candidate is selected; that
+investigation itself changes no released ROM identity. The separate MTZ3
+candidate below changes only object data. See the
 [driver dependency evidence](docs/BUGFIXED.md#post-v302-selective-driver-investigation).
+
+Current development builds of Bugfixed select a **post-v3.0.2 MTZ3 cleanup
+candidate — hardware-qualified on original MiSTer FPGA for the targeted MTZ3
+scope**. They remove five pinned leftover
+or misplaced object entries; no player-visible enhancement is claimed. Version
+stays `3.0.2`; the released identities and their hardware evidence remain frozen.
+The candidate has its own strict identities: stock `DB7E` / `effa6c09...`, MD+
+`48E8` / `087812de...`. Production remains exact. See the
+[MTZ3 evidence, identities and hardware scope](docs/BUGFIXED.md#post-v302-mtz3-cleanup-candidate).
 
 ## What the build does
 
@@ -222,7 +232,7 @@ paths cannot target the other flavour's reserved ROM or prepared directory.
 Internally, `BuildVariant` selects isolated paths, package naming, strict ROM
 identity and an audited layout profile. Production adapts pristine pinned REV01.
 Bugfixed first applies the authoritative `bugfixed.apply_policy()` transformation,
-checks all eleven post-policy source/object hashes, then applies the shared Forge adapter.
+checks all twelve post-policy source/object hashes, then applies the shared Forge adapter.
 Its backend starts at `$108000`, after the curated sound banks; Production
 stays at `$100000`. Each profile checks its own hooks, loader, compressed driver
 and reference baseline. Both preserve the same Forge RAM allocation and all
@@ -233,7 +243,7 @@ Drive core `26.06.03` for the targeted door-data/runtime-workaround scope and
 regression sanity**: all nine
 CPZ1/CPZ2/DEZ1 Obj2D subtypes come from pinned Fixed Files as `$02`, and both
 Bugfixed runtime `$03` overrides are removed atomically.
-Bugfixed MD+ is 2,097,152 bytes, stored/calculated checksum `0951`, MD5
+Released v3.0.2 Bugfixed MD+ is 2,097,152 bytes, stored/calculated checksum `0951`, MD5
 `5d3e5979d3f110d2761da3166b14b7cf`, SHA-256
 `e9f56f0efd72844918918f2efdecf6183f5bdabb47f235b61cc511a16942d3b5`.
 Production, selective audio, prior selected layouts and Forge/Z80/RAM remain
@@ -501,6 +511,7 @@ PYTHONPATH=. build/emulation-venv/bin/python tests/check_audio_data_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_level_data_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_door_data_binary.py
 PYTHONPATH=. build/emulation-venv/bin/python tests/check_selective_driver_binary.py
+PYTHONPATH=. build/emulation-venv/bin/python tests/check_mtz3_data_binary.py
 ```
 
 The binary suites check the exact production identity and execute compiled
@@ -517,8 +528,12 @@ source policy, exclusions, compiled gameplay, RAM and retail Z80 evidence.
 The door audit reverses only the post-v3.0.1 door phase to recover both exact
 released v3.0.1 images, accounting for every moved byte, address operand and
 symbol, and executes compiled Obj2D behavior at all nine placements. It scans
-tracked and proposed files for copied door payloads. The older level/audio audits
-first apply that independent inverse; their historical identities stay frozen.
+tracked and proposed files for copied door payloads.
+The MTZ3 audit accounts for all 14,889 changed bytes in each candidate and all
+22 symbol changes, then reconstructs both complete released v3.0.2 images.
+The older door/level/audio audits reverse MTZ3 first; their historical identities
+and evidence stay frozen. The driver audit also reverses MTZ3 before checking
+the unchanged released driver and ROM baselines.
 The selective audio audit reconstructs both complete v3 Bugfixed images, freezes
 all symbol addresses and compares selected compiled data with pristine upstream
 fixed-data assemblies. The level audit first reconstructs both pre-level ROMs

@@ -10,6 +10,7 @@ from collections import Counter
 from pathlib import Path
 
 from door_data_evidence import DOORS, RELEASED, SPANS, door_inputs, restore_v301
+from mtz3_data_evidence import restore_v302
 from unicorn import UC_ARCH_M68K, UC_MODE_BIG_ENDIAN, Uc
 from unicorn.m68k_const import (
     UC_CPU_M68K_M68000,
@@ -100,9 +101,10 @@ class DoorDataBinaryTests(unittest.TestCase):
             ('stock', bugfixed.STOCK_BUGFIXED_ROM_PATH, bugfixed.STOCK_BUGFIXED_LISTING_PATH),
             ('mdplus', BuildVariant.BUGFIXED.rom_path, BuildVariant.BUGFIXED.prepared_dir / 's2.lst'),
         ):
-            rom, symbols = path.read_bytes(), modern.modern_symbols(listing)
+            rom, symbols = restore_v302(path.read_bytes(), modern.modern_symbols(listing), kind)
             report = {}
-            baseline, old_symbols = restore_v301(rom, symbols, listing, kind, report)
+            baseline, old_symbols = restore_v301(path.read_bytes(), modern.modern_symbols(listing),
+                                                listing, kind, report)
             cls.images[kind] = rom, symbols, baseline, old_symbols, listing
             cls.reports[kind] = report
 
@@ -129,7 +131,9 @@ class DoorDataBinaryTests(unittest.TestCase):
         (BUILD / 'door-data-diff.json').write_text(json.dumps(self.reports, indent=2) + '\n')
 
     def test_reconstruction_rejects_mutations_and_wrong_listing(self):
-        rom, symbols, _, _, listing = self.images['mdplus']
+        _, _, _, _, listing = self.images['mdplus']
+        rom = BuildVariant.BUGFIXED.rom_path.read_bytes()
+        symbols = modern.modern_symbols(listing)
         # Check code, assets, padding, selected data, audio, Z80 and Forge. Repair
         # checksum to ensure body coverage does not rely on checksum rejection.
         for offset in (0x2000, 0x11902, 0x11952, 0x50560, 0xE47E2, 0xE6BD8,

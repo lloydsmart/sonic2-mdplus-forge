@@ -10,6 +10,8 @@ import hashlib
 import json
 import re
 
+from mtz3_data_evidence import restore_v302
+
 from tools.mdplus_builder.common import SOURCE_MODERN_DIR
 from tools.mdplus_builder.source import _git_output, genesis_checksum
 
@@ -115,7 +117,8 @@ def released_symbols(symbols, restored):
 
 
 def restore_v301(rom, symbols, listing, kind, report=None):
-    """Reverse only doors, their two stores, and mathematically derived relocations."""
+    """Reverse MTZ3 first, then doors/stores and their derived relocations."""
+    rom, symbols = restore_v302(rom, symbols, kind)
     assert len(rom) == 0x200000
     assert genesis_checksum(rom)[0] == genesis_checksum(rom)[1]
     restored = bytearray(len(rom))

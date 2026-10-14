@@ -12,7 +12,7 @@ The maintained builds have distinct policies and verification profiles:
 | Stock Production reference | Untouched pinned REV01 | None |
 | Stock Bugfixed reference | Curated game fixes described here | None |
 | Production MD+ | Pristine retail policy | Hardware-qualified Stage 5 |
-| Bugfixed MD+ | Curated policy, audio and six layouts | Hardware-qualified; targeted door scope below |
+| Bugfixed MD+ development | Curated policy, audio and seven layouts | MTZ3 hardware-qualified; targeted scope below |
 
 `rom-bugfixed` and its package integrate curated gameplay fixes with Forge
 MD+. The exact frozen released v3.0.2 identity `0951` / `e9f56f0e...` is
@@ -30,9 +30,257 @@ evidence; the [v3.0.1 record](releases/v3.0.1.md) remains immutable historical e
 
 Historical preparation, identity and Forge-validation sections below retain their
 released pre-door addresses, hashes and test results. The released v3.0.2 door section
-describes the current changes to those tables. The OOZ2 investigation below
+describes the released changes to those tables. Current development adds only
+the MTZ3 candidate described next. The OOZ2 investigation below
 records a hardware rejection; it adds no maintained ROM changes. Historical
 evidence stays tied to its exact identity.
+
+## Post-v3.0.2 MTZ3 cleanup candidate
+
+**Post-v3.0.2 MTZ3 cleanup candidate — hardware-qualified on original MiSTer
+FPGA for the targeted MTZ3 scope below**.
+This current-development selection cleans leftover/misplaced placement data;
+it is not a claimed player-visible enhancement. Version remains `3.0.2`.
+The released v3.0.2 identities and their qualification stay frozen. Production
+remains the exact default Stage 5 identity. Neither selective driver proposal
+is adopted; both global driver/audio flags remain zero, OOZ2 retains `$30` and
+its initialization guard, and the complete alternate 2P mechanism stays excluded.
+Issue #26 remains unrelated/open. No historical release record changes.
+
+### Independent pinned input and decision gate
+
+At dependency commit `380f37a731bfc720bb0371a35a593184a7ec5e43`, compare
+`level/objects/MTZ_3.bin` with the same path below
+`Utility Project Files/Fixed Files/`. Both working files were also compared
+byte-for-byte with their committed Git blobs before implementation.
+
+| Input | Bytes / records | SHA-256 |
+| --- | --- | --- |
+| Retail | 1,620 / 270 | `9d64fd5640ec834d4814ace9c7e87955316ad3ed95e1ba37a287e439bdaae157` |
+| Fixed Files | 1,590 / 265 | `ab3f9ea828c0e781797beaba3570aab55df93838afeb6b51e6131bb660930372` |
+
+An independent sequence comparison found exactly five single-record deletions,
+no insertion or replacement. Filtering the retail sequence by these zero-based
+indices produces the complete reference in exactly the same survivor order.
+All five have zero orientation/respawn flags and no high ID bit.
+
+| Retail index | Position | Object / subtype | Upstream identification |
+| --- | --- | --- | --- |
+| 53 | `$0A98,$0258` | Obj36 / `$40` | Misplaced spikes |
+| 100 | `$1174,$05E0` | Obj2D / `$01` | Leftover door |
+| 217 | `$1D20,$056D` | Obj65 / `$13` | Leftover platform |
+| 230 | `$1F80,$05FC` | Obj31 / `$02` | Leftover lava collision |
+| 233 | `$2080,$05FC` | Obj31 / `$02` | Leftover lava collision |
+
+The pinned `Fixed Files.txt` identifies each removal. It is corroborated by the
+object implementations, mappings, MTZ PLCs, object manager and decompressed
+layout/chunk/collision inputs. All five are removable leftovers, with no
+software evidence of a legitimate progression dependency or reason to retain
+any subset. **Decision gate passes for all five, independently of unrelated
+Fixed Files.** The completed normal hardware progression check is recorded below.
+
+### Gameplay relevance and limits of the evidence
+
+`ObjectsManager_Main`/`ChkLoadObj` load placements by horizontal camera range;
+there is no Y or terrain rejection. All five can allocate during ordinary
+camera traversal if slots are available, even though their centers are embedded
+in terrain. Zero respawn flags mean no remembered-state index is removed.
+The unchanged MTZ3 dynamic boss/progression events are separate code.
+
+- **Spikes:** subtype `$40` initializes stationary sideways spikes, frame 4,
+  width/radius 16, using `ArtTile_ArtNem_HorizSpike=$042C`, palette 1. MTZ's PLC
+  does load upright `ArtNem_Spikes`, contrary to a literal reading of upstream's
+  broad note; it does **not** load the horizontal spike art this record uses.
+  Correct sideways rendering is therefore unsupported. `Obj36_Sideways` still
+  calls `SolidObject` and can hurt a character on side contact, independently
+  of art. Its center is in a full side-solid block, but its sprite/collision
+  bounds can overhang the adjacent empty column. A normal-route effect is not
+  demonstrated; do not describe it as necessarily invisible or wholly inert.
+  Debug can inspect the bad placement and exiting debug near it can exercise
+  collision. Removing this misplaced hazard adds no platform/progression loss.
+- **Door:** MTZ-specific Obj2D initialization uses level art at tile base zero,
+  palette 3, mapping frame 1 (two 24-by-32 pieces using offset `$5F`), width 12.
+  It is a genuine drawable/collidable one-way barrier, not an artless dummy:
+  it raises up to 64 pixels in eight-pixel steps for Sonic/Tails in its trigger
+  rectangle, then lowers. Collision arguments are `(23,32,33,x)` including the
+  player allowance. Its closed drawn footprint sits in side-solid terrain;
+  collision can extend a little beyond the wall edge. Raising it can enter
+  clear cells above that footprint, so it is not guaranteed to remain visually
+  occluded. A normal-play trigger/route effect is not demonstrated. Debug can
+  reveal/trigger it or allow collision after leaving debug. Terrain blocks the embedded
+  location; this record is not needed to gate a legitimate route.
+- **Platform:** subtype `$13` selects MTZ level-art frame 1, width 32, radius 12,
+  behavior 3, travel 64 pixels. It is a proximity-triggered retracting one-way
+  floor, not the subtype `$04` horizontal lift and not a switch/cog child. With
+  no X flip it retracts left from `$1D20` to `$1CE0`, in sixteen-pixel steps;
+  its complete footprint remains within the solid `$0560-$057F` terrain band.
+  It calls `SolidObject`/`DisplaySprite`, but supplies no accessible platform
+  surface beyond that terrain. Debug may reveal the sprite; removal does not
+  remove a legitimate lift, switch or progression surface.
+- **Lava markers:** subtype 2 sets collision flags `$95`: an invisible damage
+  rectangle with half-width 128 and half-height 32. `TouchResponse` tests that
+  damage without requiring sprite visibility; these are not solid platforms.
+  Obj31 displays monitor-art marker mappings only in debug. Both centers are
+  in full side-solid blocks. The first marker also overlaps the cavity at
+  `$1F00-$1F7F`, enclosed by full solid bands at `$0580-$059F`/`$0600-$061F`
+  and side walls. The other is within the same lower solid/cavity region.
+  This supports leftover geometry, not an ordinary accessible lava hazard.
+  Debug can enter these spaces, reveal the markers, then encounter damage on
+  leaving placement mode. No normal-route collision benefit is claimed.
+
+The compiled audit executes all four object implementations in stock/MD+ and
+reconstructed release images, and runs the real Kosinski decoder on MTZ3's
+layout (4,096 bytes), chunks (32,768) and collision index (768). Full solid
+collision profiles corroborate the embedding and the platform's entire travel.
+This is bounded software evidence, not a proof of every possible glitch route
+or pixel-level rendering on hardware. The hardware observations are recorded below.
+
+### Candidate identities and independent layout accounting
+
+Both candidates are 2,097,152 bytes; stored and calculated checksums agree.
+
+| Candidate | Checksum | MD5 |
+| --- | --- | --- |
+| Stock Bugfixed | `DB7E` | `4cef9ef59c6342d9c49b5352eb9789d7` |
+| Bugfixed MD+ | `48E8` | `55ed43f9caa34773d5a17a2854cfe2d2` |
+
+SHA-256:
+
+- Stock: `effa6c09e2f33773165fdd255fc9f0b334dbdd8ed7df2830889b8b8aea265233`.
+- MD+: `087812de2869e2976627e8bf83d60c6a7b47aad635c16691dc48748e711eb48c`.
+
+The strict profiles remain independent of Production and of one another.
+No checksum/signature/PCM/alignment check is weakened. The Forge adapter reuses
+`apply_policy`; only the authoritative layout selection changes. It stores
+hashes and deletion shapes/indices, derives payloads from checked dependency
+inputs, and fails before writes on input/reference/shape/target drift. All prior
+selected entries and exclusions remain unchanged. Twelve source/object files
+change from pristine upstream; only MTZ3 is newly selected relative to v3.0.2.
+
+The two independently assembled candidate listings have exactly the same
+object-table movement. `Objects_MTZ_3=$E7D00`, `Off_Objects=$E6C00`,
+`Off_Rings=$E4800`, all earlier object labels and all ring data/boundaries stay
+fixed. The MTZ3 payload ends at `$E8336` instead of `$E8354`; its following
+six-byte parser boundary and all remaining object bytes shift back by 30.
+The table has 28 changed word operands (30 differing byte positions), including
+repeated `Objects_Null` entries. No absolute pointer or code branch/index operand
+moves. The dedicated inverse checks every one of the 34 table entries.
+
+| Downstream label | Released v3.0.2 | MTZ3 candidate | Delta |
+| --- | --- | --- | --- |
+| `Objects_WFZ_1` | `$E835A` | `$E833C` | -30 |
+| `Objects_WFZ_2` | `$E870E` | `$E86F0` | -30 |
+| `Objects_HTZ_1` | `$E8714` | `$E86F6` | -30 |
+| `Objects_HTZ_2` | `$E8A7A` | `$E8A5C` | -30 |
+| `Objects_HPZ_1` | `$E9092` | `$E9074` | -30 |
+| `Objects_HPZ_2` | `$E91A6` | `$E9188` | -30 |
+| `Objects_OOZ_1` | `$E91B2` | `$E9194` | -30 |
+| `Objects_OOZ_2` | `$E9626` | `$E9608` | -30 |
+| `Objects_MCZ_1` | `$E9AA0` | `$E9A82` | -30 |
+| `Objects_MCZ_2` | `$E9DB2` | `$E9D94` | -30 |
+| `Objects_CNZ_1` | `$EA130` | `$EA112` | -30 |
+| `Objects_CNZ_2` | `$EA7EA` | `$EA7CC` | -30 |
+| `Objects_CPZ_1` | `$EADE4` | `$EADC6` | -30 |
+| `Objects_CPZ_2` | `$EB180` | `$EB162` | -30 |
+| `Objects_DEZ_1` | `$EB642` | `$EB624` | -30 |
+| `Objects_DEZ_2` | `$EB666` | `$EB648` | -30 |
+| `Objects_ARZ_1` | `$EB66C` | `$EB64E` | -30 |
+| `Objects_ARZ_2` | `$EBAB6` | `$EBA98` | -30 |
+| `Objects_SCZ_1` | `$EBFF6` | `$EBFD8` | -30 |
+| `Objects_SCZ_2` | `$EC164` | `$EC146` | -30 |
+| `Objects_Null` | `$EC16A` | `$EC14C` | -30 |
+
+These 21 object labels and `paddingSoFar` are the only changed symbol entries
+in either entire map. `paddingSoFar` increases by 30: stock `$1000EF -> $10010D`,
+MD+ `$FFA2F -> $FFA4D`. Emitted object data ends at `$EC164` instead of `$EC182`;
+zero padding through the explicit `$1000` alignment grows from 3,710 to 3,740
+bytes. `SoundDriverLoad=$ED000`, `SaxDec_GetByte=$ED0DE`, driver start `$ED0E8`,
+upstream `Snd_Driver_End=$EE04C` label, actual compressed ends `$EE04E` (stock)
+and `$EE093` (MD+), loaded Z80 sizes 4,872/4,986, DAC boundaries, music banks
+`$F8000/$100000`, `SoundIndex`,
+sound end `$107FEC`, Forge `$108000-$1086BF` and every RAM address stay fixed.
+The `$FFF100-$FFF5FF` hole, delayed activation and 21 MD+ transactions persist.
+Production stock/MD+ retain their exact released identities and layouts.
+
+| Disjoint changed-byte category | Candidate address interval (end exclusive) | Differing positions, each ROM |
+| --- | --- | --- |
+| Header checksum | `$18E-$190` | 2 |
+| Object table words | `$E6C00-$E6C44` | 30 |
+| MTZ3 survivor movement | `$E7D00-$E8336` | 982 |
+| Subsequent object/boundary movement | `$E8336-$EC164` | 13,865 |
+| Newly exposed alignment | `$EC164-$EC182` | 10 |
+| **Total** | Exact union above | **14,889** |
+
+`tests/mtz3_data_evidence.py` independently filters hash-checked inputs, requires
+the complete compiled MTZ3 reference, reinserts retail data, moves each surviving
+tail byte bijectively, inverts exactly the table words and restores the released
+checksum. Full-ROM MD5/SHA-256 and whole symbol-map hashes recover stock
+`909e5f22...` and MD+ `e9f56f0e...` exactly, with no unexplained masks. It checks
+all zero alignment and the total/category counts. Mutation controls repair the
+header checksum while altering survivor/deletion boundaries, movement, padding,
+table, driver, Forge and trailing bytes; they also reject corrupted checksums
+and wrong/mutated symbols. Older door/level/audio and driver audits apply this
+inverse first, retaining their independent frozen historical baselines.
+
+The asset-boundary scan reads all MTZ3 records only from generated pinned inputs,
+then scans every tracked and proposed nonignored file for raw records and compact
+hex representations. No placement payload is retained in maintained source/tests/docs or JSON evidence.
+Dependency checkouts are read-only; generated ROMs/listings/reports stay ignored.
+The focused audit and CI include seven compiled tests; one synthetic deletion
+unit test exercises original-index ordering and fail-closed guards. Maintained
+validation totals 224 tests (216 baseline plus eight MTZ3 additions). Current
+candidate validation and fresh Linux reproduction results are recorded below.
+
+### Software validation and fresh Linux reproduction
+
+The final hardware-qualification validation rerun in the working checkout and
+a fresh disposable Linux copy each passed all **224 maintained tests**:
+93 unit tests and 131 compiled/audit tests. This is the
+216-test baseline plus one synthetic deletion unit test and seven MTZ3 tests.
+All four ROM builds, both strict MD+ verifiers, Production identity/source pin,
+backend/handoff/live CPU suites for both variants, the Production `fixBugs=1`
+negative control, stock Bugfixed, integration, selective audio, level, door,
+selective-driver and MTZ3 audits passed. Ruff, Markdown lint, compileall,
+manifest validation and whitespace checks passed too.
+
+The disposable copy at `build/mtz3-final-clean-linux/` received maintained files only,
+including the two new proposed tests/helpers, with no original generated build
+outputs. It fetched its own immutable dependency,
+installed its own Python test environment and rebuilt all four ROMs. Each image
+is byte-identical to the working checkout, including both candidate identities,
+Production checksums/identities and exact MD+ signatures. No audio/packaging
+code or inputs changed; synthetic FFmpeg tests passed in both unit runs.
+Generated logs and payload-free JSON accounting remain under ignored `build/`.
+The software results are separate from the exact candidate's targeted hardware
+qualification below; no deployment or release was performed.
+
+### Targeted MTZ3 MiSTer hardware qualification
+
+Lloyd reported successful testing on the **original MiSTer FPGA** of the
+2,097,152-byte Bugfixed MD+ candidate, checksum `48E8`, SHA-256
+`087812de2869e2976627e8bf83d60c6a7b47aad635c16691dc48748e711eb48c`.
+The Mega Drive core version was not recorded for this session.
+
+| Targeted check | Reported result |
+| --- | --- |
+| Full MTZ3 normal playthrough, including boss and exit | Completed without observed issues |
+| Obj36 spikes region at `$0A98,$0258` | Inspected; no issues observed |
+| Obj2D door region at `$1174,$05E0` | Inspected; no issues observed |
+| Obj65 platform region at `$1D20,$056D` | Inspected; no issues observed |
+| Obj31 invisible damage marker region at `$1F80,$05FC` | Inspected; no issues observed |
+| Obj31 invisible damage marker region at `$2080,$05FC` | Inspected; no issues observed |
+
+**No issues were observed in this targeted scope. This exact MD+ candidate is
+hardware-qualified for MTZ3 normal progression, boss/exit completion and the five
+affected placement regions.** Not every possible level path or collision state
+was exhaustively tested. No separate audio, pause, reset or debug-mode checks are
+claimed. These observations do not establish a player-visible improvement or
+qualify the stock candidate, other game areas, or another ROM identity. Earlier
+hardware evidence remains attached to its exact released identities.
+
+The targeted MTZ3 hardware gate is satisfied for this exact MD+ candidate. No
+RetroNAS copy, package publication or release is performed by this evaluation;
+version remains `3.0.2` and the released v3.0.2 identities stay frozen.
 
 ## Post-v3.0.2 selective driver investigation
 
@@ -789,7 +1037,8 @@ targeted results and their qualification boundary are recorded above.
 **The two OOZ2 Obj45 Fixed Files substitutions were hardware-tested at the correct
 placements and rejected. Bugfixed retains released v3.0.2 retail `$30` placement
 data plus the existing Obj45 guard.** The candidate implementation, tests and CI
-changes have been removed; maintained executable inputs match exact `v3.0.2`.
+changes have been removed; the maintained OOZ2 inputs match exact `v3.0.2`
+and are unchanged by the separate MTZ3 cleanup candidate.
 Version remains `3.0.2`. Revisit these substitutions only with genuinely new
 placement-specific evidence. Issue #26 remains unrelated/open.
 
